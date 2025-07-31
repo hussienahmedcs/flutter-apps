@@ -2,6 +2,7 @@ import 'package:flip_card/flip_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:wordstory/screens/dashboard_screen.dart';
 
 import '../models/entry_model.dart';
 import '../providers/auth_provider.dart';
@@ -16,6 +17,7 @@ class FlashcardsScreen extends StatefulWidget {
 
 class _FlashcardsScreenState extends State<FlashcardsScreen> {
   List<Entry> _entries = [];
+  List<String> _selectedSessionIds = [];
   int _currentIndex = 0;
   bool _loading = true;
   bool _error = false;
@@ -25,8 +27,70 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
   void initState() {
     super.initState();
     _loadEntries();
+    // _showSessionSelector();
   }
 
+  /// Step 1: Show a dialog with multi-select session checkboxes
+  Future<void> _showSessionSelector() async {
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
+    if (user == null) return;
+
+    final sessionsSnapshot =
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('sessions').get();
+
+    final allSessions =
+        sessionsSnapshot.docs.map((doc) => {'id': doc.id, 'title': doc['title'] ?? 'Untitled'}).toList();
+
+    List<String> tempSelected = List.from(_selectedSessionIds);
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text("Select Sessions"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: allSessions.length,
+              itemBuilder: (context, index) {
+                final session = allSessions[index];
+                return CheckboxListTile(
+                  title: Text(session['title']),
+                  value: tempSelected.contains(session['id']),
+                  onChanged: (selected) {
+                    setState(() {
+                      if (selected == true) {
+                        tempSelected.add(session['id']);
+                      } else {
+                        tempSelected.remove(session['id']);
+                      }
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                if (tempSelected.isEmpty) return;
+                setState(() {
+                  _selectedSessionIds = tempSelected;
+                });
+                Navigator.of(ctx).pop();
+                _loadEntries();
+              },
+              child: const Text("Load"),
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  /// Step 2: Load entries only from selected sessions
   Future<void> _loadEntries() async {
     setState(() {
       _loading = true;
@@ -41,9 +105,18 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
         });
         return;
       }
-      final querySnapshot =
-          await FirebaseFirestore.instance.collectionGroup('entries').where('user_id', isEqualTo: user.uid).get();
-      final entries = querySnapshot.docs.map((doc) => Entry.fromMap(doc.id, doc.data())).toList();
+
+      // Start building the query
+      Query query = FirebaseFirestore.instance.collectionGroup('entries').where('user_id', isEqualTo: user.uid);
+
+      // Add session filter only if selectedSessionIds is not empty
+      if (_selectedSessionIds.isNotEmpty) {
+        query = query.where('session_id', whereIn: _selectedSessionIds);
+      }
+
+      final querySnapshot = await query.get();
+      final entries =
+          querySnapshot.docs.map((doc) => Entry.fromMap(doc.id, doc.data() as Map<String, dynamic>)).toList();
       entries.shuffle();
       setState(() {
         _entries = entries;
@@ -53,16 +126,6 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
       setState(() {
         _error = true;
         _loading = false;
-      });
-    }
-  }
-
-  void _nextCard() {
-    if (_currentIndex + 1 >= _entries.length) {
-      _finishSession();
-    } else {
-      setState(() {
-        _currentIndex++;
       });
     }
   }
@@ -261,7 +324,16 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
           Text('You reviewed ${_entries.length} items and earned $_earnedXp XP.'),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              if (Navigator.of(context).canPop())
+                Navigator.of(context).pop();
+              else {
+                DashboardScreen.switchToHome(context);
+                setState(() {
+                  _currentIndex = 0;
+                });
+              }
+            },
             child: const Text('Back to Home'),
           ),
         ],

@@ -22,6 +22,11 @@ import 'profile_screen.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
 
+  static void switchToHome(BuildContext context) {
+    final state = context.findAncestorStateOfType<_DashboardScreenState>();
+    state?.switchTab(0);
+  }
+
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -29,6 +34,10 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _index = 0;
   DateTime? _lastBackPress;
+
+  void switchTab(int index) {
+    setState(() => _index = index);
+  }
 
   @override
   Widget build(BuildContext context) {

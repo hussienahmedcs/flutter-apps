@@ -44,8 +44,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   /// Register a new user with an email and password and display name.
-  Future<void> signUpWithEmail(
-      String email, String password, String displayName) async {
+  Future<void> signUpWithEmail(String email, String password, String displayName) async {
     _loading = true;
     notifyListeners();
     try {
@@ -71,11 +70,11 @@ class AuthProvider with ChangeNotifier {
 
   /// Sign the user out of the application.
   Future<void> signOut() async {
-    // _loading = true;
-    // notifyListeners();
-    // await _authService.signOut();
-    // _loading = false;
-    // notifyListeners();
+    _loading = true;
+    notifyListeners();
+    await _authService.signOut();
+    _loading = false;
+    notifyListeners();
   }
 
   @override
