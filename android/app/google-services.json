@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1046711133934",
+    "project_id": "wordstory-fe3a3",
+    "storage_bucket": "wordstory-fe3a3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1046711133934:android:f53a6ffd8f135719a375ff",
+        "android_client_info": {
+          "package_name": "com.itnovax.wordstory"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1046711133934-dviuudqsi19a2m4jog3ihc4qfpaj6ho4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.itnovax.wordstory",
+            "certificate_hash": "79f21e20e65aa5bec80f3fe00bf97dafe62a5d2f"
+          }
+        },
+        {
+          "client_id": "1046711133934-3jo2sl301lec3s39t7olmopgg555jdri.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAebwQhX3UTs4uhHtfnfoTQmkNOQBT1WmE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1046711133934-3jo2sl301lec3s39t7olmopgg555jdri.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1046711133934-qvivnntpg6mcv3c98vukdu36gps3atff.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.itnovax.wordstory"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
