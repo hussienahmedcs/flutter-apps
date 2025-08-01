@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:wordstory/providers/gamification_provider.dart';
 import '../models/session_model.dart';
 import '../models/story_model.dart';
 import '../models/entry_model.dart';
@@ -8,11 +7,8 @@ import '../providers/session_provider.dart';
 import '../providers/story_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/firestore_service.dart';
+import '../services/gemini_ocr_service.dart'; // Your Gemini/GPT AI service
 
-/// Screen where users can craft stories using vocabulary from their
-/// sessions.  The user selects a session, picks words as chips,
-/// optionally generates a writing prompt and writes the story in a
-/// multiline text field.  Stories can be created or edited.
 class StoryBuilderScreen extends StatefulWidget {
   final String? editStoryId;
   const StoryBuilderScreen({Key? key, this.editStoryId}) : super(key: key);
@@ -22,13 +18,13 @@ class StoryBuilderScreen extends StatefulWidget {
 }
 
 class _StoryBuilderScreenState extends State<StoryBuilderScreen> {
-  String? _selectedSessionId;
-  final List<Entry> _sessionEntries = [];
-  final List<Entry> _selectedEntries = [];
+  List<String> _selectedSessionIds = [];
   final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _topicController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
-  bool _loadingEntries = false;
+  bool _loadingStory = false;
   bool _editingExisting = false;
+  Story? _editingStory;
 
   @override
   void initState() {
@@ -36,122 +32,134 @@ class _StoryBuilderScreenState extends State<StoryBuilderScreen> {
     if (widget.editStoryId != null) {
       _editingExisting = true;
       final storyProvider = Provider.of<StoryProvider>(context, listen: false);
-      final story = storyProvider.stories.firstWhere(
-          (s) => s.id == widget.editStoryId,
+      final story = storyProvider.stories.firstWhere((s) => s.id == widget.editStoryId,
           orElse: () => Story(
-              id: '',
-              sessionId: '',
-              title: '',
-              content: '',
-              usedWords: [],
-              createdAt: DateTime.now()));
+                id: '',
+                sessionId: '',
+                title: '',
+                content: '',
+                usedWords: [],
+                createdAt: DateTime.now(),
+              ));
+      _editingStory = story;
       _titleController.text = story.title;
       _contentController.text = story.content;
-      _selectedSessionId = story.sessionId;
-      // we will load entries later when session is selected
+      _topicController.text = ""; // Optionally load a previous topic
+      if (story.sessionId.isNotEmpty) {
+        _selectedSessionIds = [story.sessionId];
+      }
     }
   }
 
   @override
   void dispose() {
     _titleController.dispose();
+    _topicController.dispose();
     _contentController.dispose();
     super.dispose();
   }
 
-  void _loadEntries(String sessionId) async {
-    setState(() {
-      _loadingEntries = true;
-      _sessionEntries.clear();
-      _selectedEntries.clear();
-    });
-    final user = Provider.of<AuthProvider>(context, listen: false).user;
-    if (user == null) return;
-    final service = FirestoreService();
-    final entriesStream = service.watchEntries(user.uid, sessionId);
-    // subscribe once and take first snapshot
-    entriesStream.first.then((entries) {
-      setState(() {
-        _sessionEntries.addAll(entries.where((e) => e.type == EntryType.word));
-        // Pre-select entries if editing existing story
-        if (_editingExisting) {
-          final storyProvider = Provider.of<StoryProvider>(context, listen: false);
-          final story = storyProvider.stories.firstWhere(
-              (s) => s.id == widget.editStoryId,
-              orElse: () => Story(
-                  id: '',
-                  sessionId: '',
-                  title: '',
-                  content: '',
-                  usedWords: [],
-                  createdAt: DateTime.now()));
-          for (final entry in _sessionEntries) {
-            if (story.usedWords.contains(entry.id)) {
-              _selectedEntries.add(entry);
-            }
-          }
-        }
-        _loadingEntries = false;
-      });
-    });
+  Widget _buildSessionSelector(List<Session> allSessions) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Select Sessions", style: TextStyle(fontWeight: FontWeight.bold)),
+        Wrap(
+          spacing: 8,
+          children: allSessions.map((session) {
+            final selected = _selectedSessionIds.contains(session.id);
+            return FilterChip(
+              label: Text(session.title),
+              selected: selected,
+              onSelected: (val) {
+                setState(() {
+                  if (val) {
+                    _selectedSessionIds.add(session.id);
+                  } else {
+                    _selectedSessionIds.remove(session.id);
+                  }
+                });
+              },
+            );
+          }).toList(),
+        ),
+      ],
+    );
   }
 
-  void _toggleSelected(Entry entry) {
-    setState(() {
-      if (_selectedEntries.contains(entry)) {
-        _selectedEntries.remove(entry);
-      } else {
-        _selectedEntries.add(entry);
-      }
-    });
-  }
-
-  void _generatePrompt() {
-    if (_selectedEntries.isEmpty) {
+  Future<void> _generateAIStory() async {
+    final topic = _topicController.text.trim();
+    if (_selectedSessionIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one word to generate a prompt.')),
+        const SnackBar(content: Text('Select session(s)')),
       );
       return;
     }
-    final words = _selectedEntries.map((e) => e.content).join(', ');
-    final prompt = 'Write a short story that includes the following words: $words.';
-    setState(() {
-      _contentController.text = prompt;
-    });
+
+    setState(() => _loadingStory = true);
+
+    try {
+      // Fetch all words from the selected sessions
+      final user = Provider.of<AuthProvider>(context, listen: false).user;
+      if (user == null) return;
+
+      final service = FirestoreService();
+      Set<String> allWords = {};
+
+      for (final sessionId in _selectedSessionIds) {
+        final entries = await service.getEntries(user.uid, sessionId);
+        allWords.addAll(entries.where((e) => e.type == EntryType.word).map((e) => e.content));
+      }
+
+      if (allWords.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No words found in selected sessions.')),
+        );
+        setState(() => _loadingStory = false);
+        return;
+      }
+
+      // Compose AI prompt
+      final prompt =
+          "Write a short story for English beginner learners, with a reading time of 3 to 7 minutes and max 450 words, ${topic.isEmpty ? "" : "about \"$topic\""}. You must include ALL of the following words: ${allWords.join(', ')}.";
+
+      // Call your AI story API (replace with your Gemini/GPT service)
+      final aiService = GeminiOcrService(context: context);
+      final storyText = await aiService.generateStoryFromPrompt(prompt);
+
+      setState(() {
+        _contentController.text = storyText;
+      });
+    } finally {
+      setState(() => _loadingStory = false);
+    }
   }
 
   void _saveStory() async {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
-    if (title.isEmpty || content.isEmpty || _selectedSessionId == null) {
+    if (title.isEmpty || content.isEmpty || _selectedSessionIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in title, select session and write content.')),
+        const SnackBar(content: Text('Please fill in title, select session(s), and write story content.')),
       );
       return;
     }
     final user = Provider.of<AuthProvider>(context, listen: false).user;
     if (user == null) return;
     final storyProvider = Provider.of<StoryProvider>(context, listen: false);
+
     final story = Story(
       id: widget.editStoryId ?? '',
-      sessionId: _selectedSessionId!,
+      sessionId: _selectedSessionIds.join(','), // You may wish to support multiple in your model!
       title: title,
       content: content,
-      usedWords: _selectedEntries.map((e) => e.id).toList(),
+      usedWords: [], // You can extract which words were used in the story for stats
       createdAt: widget.editStoryId != null
-          ? storyProvider.stories
-              .firstWhere((s) => s.id == widget.editStoryId!)
-              .createdAt
+          ? storyProvider.stories.firstWhere((s) => s.id == widget.editStoryId!).createdAt
           : DateTime.now(),
     );
-    final id = await storyProvider.saveStory(story);
-    // award XP for writing story
-    final gamification = Provider.of<GamificationProvider>(context, listen: false);
-    if (!_editingExisting) {
-      // new story: +50 XP
-      gamification.addXp(50);
-      gamification.registerDailyActivity();
-    }
+    await storyProvider.saveStory(story);
+    // XP logic here, if needed
     Navigator.of(context).pop();
   }
 
@@ -174,66 +182,40 @@ class _StoryBuilderScreenState extends State<StoryBuilderScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedSessionId,
+            _buildSessionSelector(sessions),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _topicController,
               decoration: const InputDecoration(
-                labelText: 'Select Session',
+                labelText: 'Story about… (topic/theme)',
                 border: OutlineInputBorder(),
               ),
-              items: sessions
-                  .map((session) => DropdownMenuItem(
-                        value: session.id,
-                        child: Text(session.title),
-                      ))
-                  .toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    _selectedSessionId = val;
-                  });
-                  _loadEntries(val);
-                }
-              },
             ),
-            const SizedBox(height: 16),
-            if (_loadingEntries)
-              const Center(child: CircularProgressIndicator()),
-            if (_selectedSessionId != null && !_loadingEntries)
-              Wrap(
-                spacing: 8,
-                children: _sessionEntries
-                    .map(
-                      (entry) => ChoiceChip(
-                        label: Text(entry.content),
-                        selected: _selectedEntries.contains(entry),
-                        onSelected: (_) => _toggleSelected(entry),
-                      ),
-                    )
-                    .toList(),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.auto_stories),
+              label: const Text("Generate Story with AI"),
+              onPressed: _loadingStory ? null : _generateAIStory,
+            ),
+            if (_loadingStory)
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Center(child: CircularProgressIndicator()),
               ),
             const SizedBox(height: 16),
             TextField(
               controller: _contentController,
               decoration: const InputDecoration(
-                labelText: 'Story',
+                labelText: 'Your Story',
                 border: OutlineInputBorder(),
               ),
-              minLines: 6,
+              minLines: 8,
               maxLines: null,
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                ElevatedButton(
-                  onPressed: _generatePrompt,
-                  child: const Text('Generate Prompt'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _saveStory,
-                  child: const Text('Save'),
-                ),
-              ],
+            ElevatedButton(
+              onPressed: _saveStory,
+              child: const Text('Save'),
             ),
           ],
         ),

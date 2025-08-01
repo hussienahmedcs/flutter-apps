@@ -43,12 +43,17 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
   }
 
   Future<void> _loadSessions() async {
-    if (!mounted) return;
     final user = Provider.of<AuthProvider>(context, listen: false).user;
     if (user == null) return;
 
-    final query = await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('sessions').get();
+    final query = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('sessions')
+        .orderBy('date', descending: true)
+        .get();
 
+    if (!mounted) return; // <-- Check right before setState!
     setState(() {
       _sessions = query.docs.map((doc) => {'id': doc.id, 'name': doc['title'] ?? 'Untitled'}).toList();
     });
@@ -116,13 +121,17 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
 
   /// Step 2: Load entries only from selected sessions
   Future<void> _loadEntries() async {
+    if (!mounted) return; // Good practice, but see below!
+
     setState(() {
       _loading = true;
       _error = false;
     });
+
     try {
       final user = Provider.of<AuthProvider>(context, listen: false).user;
       if (user == null) {
+        if (!mounted) return;
         setState(() {
           _entries = [];
           _loading = false;
@@ -130,24 +139,27 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
         return;
       }
 
-      // Start building the query
       Query query = FirebaseFirestore.instance.collectionGroup('entries').where('user_id', isEqualTo: user.uid);
 
-      // Add session filter only if selectedSessionIds is not empty
-      // if (_selectedSessionIds.isNotEmpty) {
-      query = query.where('session_id', whereIn: _selectedSessionIds.isEmpty ? ['-1'] : _selectedSessionIds);
-      // }
+      query = query.where(
+        'session_id',
+        whereIn: _selectedSessionIds.isEmpty ? ['-1'] : _selectedSessionIds,
+      );
 
       final querySnapshot = await query.get();
+
+      if (!mounted) return; // <--- Add this after await
       final entries =
           querySnapshot.docs.map((doc) => Entry.fromMap(doc.id, doc.data() as Map<String, dynamic>)).toList();
       entries.shuffle();
+
       setState(() {
         _entries = entries;
         _loading = false;
       });
     } catch (e) {
       print(e.toString());
+      if (!mounted) return; // <--- Also check here before setState
       setState(() {
         _error = true;
         _loading = false;

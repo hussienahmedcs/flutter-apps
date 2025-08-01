@@ -56,7 +56,7 @@ class SessionDetailScreen extends StatelessWidget {
           builder: (innerContext) {
             return FloatingActionButton(
               onPressed: () {
-                final tabIndex = DefaultTabController.of(innerContext)?.index ?? 0;
+                final tabIndex = DefaultTabController.of(innerContext).index;
                 final entryType = [EntryType.word, EntryType.idiom, EntryType.phrasal][tabIndex];
                 Navigator.of(innerContext).push(
                   MaterialPageRoute(
@@ -89,7 +89,20 @@ class SessionDetailScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: ListTile(
-            title: Text(entry.content),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(entry.content, style: const TextStyle(fontWeight: FontWeight.bold)),
+                if (entry.pronounce.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      entry.pronounce,
+                      style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.blueGrey, fontSize: 14),
+                    ),
+                  ),
+              ],
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

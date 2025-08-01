@@ -23,8 +23,7 @@ class FirestoreService {
       _db.collection('users').doc(uid).collection('sessions');
 
   /// Entries collection under a session document.
-  CollectionReference<Map<String, dynamic>> _entriesRef(
-          String uid, String sessionId) =>
+  CollectionReference<Map<String, dynamic>> _entriesRef(String uid, String sessionId) =>
       _sessionsRef(uid).doc(sessionId).collection('entries');
 
   /// Stories collection under `/users/<uid>/stories`.
@@ -42,9 +41,7 @@ class FirestoreService {
     return _sessionsRef(uid)
         .orderBy('date', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Session.fromMap(doc.id, doc.data()))
-            .toList());
+        .map((snapshot) => snapshot.docs.map((doc) => Session.fromMap(doc.id, doc.data())).toList());
   }
 
   /// Create or update a session.  If [session.id] is blank a new
@@ -79,15 +76,12 @@ class FirestoreService {
         .orderBy('difficulty')
         .orderBy('added_at', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Entry.fromMap(doc.id, doc.data()))
-            .toList());
+        .map((snapshot) => snapshot.docs.map((doc) => Entry.fromMap(doc.id, doc.data())).toList());
   }
 
   /// Add or update a vocabulary entry.  If [entry.id] is blank a new
   /// document will be created.  Returns the document ID.
-  Future<String> upsertEntry(
-      String uid, String sessionId, Entry entry) async {
+  Future<String> upsertEntry(String uid, String sessionId, Entry entry) async {
     final ref = _entriesRef(uid, sessionId);
     if (entry.id.isEmpty) {
       final data = entry.toMap();
@@ -112,9 +106,7 @@ class FirestoreService {
     return _storiesRef(uid)
         .orderBy('created_at', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Story.fromMap(doc.id, doc.data()))
-            .toList());
+        .map((snapshot) => snapshot.docs.map((doc) => Story.fromMap(doc.id, doc.data())).toList());
   }
 
   /// Add or update a story.  Returns the document ID.
@@ -162,5 +154,11 @@ class FirestoreService {
   /// underlying document.
   Future<void> updateGamification(String uid, Gamification gamification) async {
     await _gamificationRef(uid).set(gamification.toMap(), SetOptions(merge: true));
+  }
+
+  /// Fetch all entries (once) for a given session.
+  Future<List<Entry>> getEntries(String uid, String sessionId) async {
+    final snapshot = await _entriesRef(uid, sessionId).get();
+    return snapshot.docs.map((doc) => Entry.fromMap(doc.id, doc.data())).toList();
   }
 }

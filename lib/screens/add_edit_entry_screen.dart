@@ -31,6 +31,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
   late TextEditingController _contentController;
   late TextEditingController _meaningController;
   late TextEditingController _exampleController;
+  late TextEditingController _pronounceController;
   late EntryType _type;
   late Difficulty _difficulty;
   // final stt.SpeechToText _speech = stt.SpeechToText();
@@ -45,6 +46,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
     _contentController = TextEditingController(text: entry?.content ?? '');
     _meaningController = TextEditingController(text: entry?.meaning ?? '');
     _exampleController = TextEditingController(text: entry?.example ?? '');
+    _pronounceController = TextEditingController(text: entry?.pronounce ?? '');
     _type = entry?.type ?? widget.type;
     _difficulty = entry?.difficulty ?? Difficulty.easy;
   }
@@ -54,6 +56,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
     _contentController.dispose();
     _meaningController.dispose();
     _exampleController.dispose();
+    _pronounceController.dispose();
     super.dispose();
   }
 
@@ -143,6 +146,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
       type: _type,
       content: _contentController.text.trim(),
       meaning: _meaningController.text.trim(),
+      pronounce: _pronounceController.text.trim(),
       example: _exampleController.text.trim(),
       difficulty: _difficulty,
       addedAt: widget.entry?.addedAt ?? DateTime.now(),
@@ -166,6 +170,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
       _contentController.clear();
       _meaningController.clear();
       _exampleController.clear();
+      _pronounceController.clear();
     });
     // ignore: use_build_context_synchronously
     if (_ocrEntries.isEmpty) Navigator.of(context).pop();
@@ -213,6 +218,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
           type: _type, // Or EntryType.word if you want fixed type
           content: entry.word,
           meaning: entry.meaning,
+          pronounce: entry.pronounce,
           example: entry.example,
           difficulty: _difficulty,
           addedAt: DateTime.now(),
@@ -288,6 +294,16 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _pronounceController,
+                decoration: InputDecoration(
+                  labelText: 'Pronunciation',
+                  prefixIcon: const Icon(Icons.volume_up, color: Colors.blueGrey, size: 20),
+                  border: const OutlineInputBorder(),
+                ),
+                style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _meaningController,
                 decoration: const InputDecoration(
                   labelText: 'Meaning',
@@ -356,7 +372,21 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 6),
                       child: ListTile(
-                        title: Text(entry.word, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(entry.word, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            if (entry.pronounce.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  entry.pronounce,
+                                  style: const TextStyle(
+                                      fontStyle: FontStyle.italic, color: Colors.blueGrey, fontSize: 14),
+                                ),
+                              ),
+                          ],
+                        ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -381,6 +411,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
                                 setState(() {
                                   _contentController.text = entry.word;
                                   _meaningController.text = entry.meaning;
+                                  _pronounceController.text = entry.pronounce;
                                   _exampleController.text = entry.example;
                                   _ocrEntries.removeAt(index);
                                 });

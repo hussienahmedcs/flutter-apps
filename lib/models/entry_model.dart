@@ -20,6 +20,7 @@ class Entry {
   final String content;
   final String meaning;
   final String example;
+  final String pronounce;
   final Difficulty difficulty;
   final DateTime addedAt;
 
@@ -30,6 +31,7 @@ class Entry {
     required this.content,
     required this.meaning,
     required this.example,
+    required this.pronounce, // <-- Add this
     required this.difficulty,
     required this.addedAt,
   });
@@ -47,6 +49,7 @@ class Entry {
       content: data['content'] as String? ?? '',
       meaning: data['meaning'] as String? ?? '',
       example: data['example'] as String? ?? '',
+      pronounce: data['pronounce'] ?? '',
       difficulty: Difficulty.values.firstWhere(
         (e) => e.toString().split('.').last == difficultyString,
         orElse: () => Difficulty.easy,
@@ -62,6 +65,7 @@ class Entry {
       'content': content,
       'meaning': meaning,
       'example': example,
+      'pronounce': pronounce,
       'difficulty': difficulty.toString().split('.').last,
       'added_at': Timestamp.fromDate(addedAt),
     };
