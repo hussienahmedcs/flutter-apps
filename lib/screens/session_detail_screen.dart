@@ -4,15 +4,50 @@ import '../models/entry_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/firestore_service.dart';
 import 'add_edit_entry_screen.dart';
+import '../models/session_model.dart';
 
 /// Shows the details for a specific session, including all entries
 /// grouped by type (word, idiom, phrasal verb).  Users can add new
 /// entries via the floating action button and edit or delete existing
 /// entries from the list.  Entries are loaded from Firestore in
 /// real time.
-class SessionDetailScreen extends StatelessWidget {
-  final String sessionId;
-  const SessionDetailScreen({Key? key, required this.sessionId}) : super(key: key);
+class SessionDetailScreen extends StatefulWidget {
+  final Session session;
+  const SessionDetailScreen({super.key, required this.session});
+
+  @override
+  State<SessionDetailScreen> createState() => _SessionDetailScreenState();
+}
+
+class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTickerProviderStateMixin {
+  int _currentTab = 0;
+  Set<String> _selectedEntryIds = {}; // Store IDs of selected entries
+  bool get _isSelectionMode => _selectedEntryIds.isNotEmpty;
+
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_handleTabChange);
+  }
+
+  void _handleTabChange() {
+    if (_tabController.index != _currentTab) {
+      setState(() {
+        _currentTab = _tabController.index;
+        _selectedEntryIds.clear(); // Reset selection on tab change
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
@@ -20,55 +55,87 @@ class SessionDetailScreen extends StatelessWidget {
       return const Scaffold(body: Center(child: Text('Not authenticated')));
     }
     final firestoreService = FirestoreService();
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Session Details'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Words'),
-              Tab(text: 'Idioms'),
-              Tab(text: 'Phrasal Verbs'),
-            ],
-          ),
-        ),
-        body: StreamBuilder<List<Entry>>(
-          stream: firestoreService.watchEntries(user.uid, sessionId),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final entries = snapshot.data ?? [];
-            final words = entries.where((e) => e.type == EntryType.word).toList();
-            final idioms = entries.where((e) => e.type == EntryType.idiom).toList();
-            final phrasals = entries.where((e) => e.type == EntryType.phrasal).toList();
-            return TabBarView(
-              children: [
-                _buildEntriesList(context, user.uid, sessionId, words),
-                _buildEntriesList(context, user.uid, sessionId, idioms),
-                _buildEntriesList(context, user.uid, sessionId, phrasals),
-              ],
-            );
-          },
-        ),
-        floatingActionButton: Builder(
-          builder: (innerContext) {
-            return FloatingActionButton(
-              onPressed: () {
-                final tabIndex = DefaultTabController.of(innerContext).index;
-                final entryType = [EntryType.word, EntryType.idiom, EntryType.phrasal][tabIndex];
-                Navigator.of(innerContext).push(
-                  MaterialPageRoute(
-                    builder: (_) => AddEditEntryScreen(sessionId: sessionId, type: entryType),
+
+    return Scaffold(
+      appBar: AppBar(
+        title: _isSelectionMode
+            ? Text('Delete (${_selectedEntryIds.length})')
+            : Text(widget.session.title ?? 'Session Details'),
+        bottom: !_isSelectionMode
+            ? TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Words'),
+                  Tab(text: 'Idioms'),
+                  Tab(text: 'Phrasal Verbs'),
+                ],
+              )
+            : null,
+        actions: [
+          if (_isSelectionMode)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () async {
+                // Confirm deletion
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Delete Selected?'),
+                    content: Text('Are you sure you want to delete ${_selectedEntryIds.length} entries?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+                    ],
                   ),
                 );
+                if (confirm == true) {
+                  for (final entryId in _selectedEntryIds) {
+                    await firestoreService.deleteEntry(user.uid, widget.session.id, entryId);
+                  }
+                  setState(() => _selectedEntryIds.clear());
+                }
               },
-              child: const Icon(Icons.add),
-            );
-          },
-        ),
+            ),
+        ],
       ),
+      body: StreamBuilder<List<Entry>>(
+        stream: firestoreService.watchEntries(user.uid, widget.session.id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final entries = snapshot.data ?? [];
+          final words = entries.where((e) => e.type == EntryType.word).toList();
+          final idioms = entries.where((e) => e.type == EntryType.idiom).toList();
+          final phrasals = entries.where((e) => e.type == EntryType.phrasal).toList();
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildEntriesList(context, user.uid, widget.session.id, words),
+              _buildEntriesList(context, user.uid, widget.session.id, idioms),
+              _buildEntriesList(context, user.uid, widget.session.id, phrasals),
+            ],
+          );
+        },
+      ),
+      floatingActionButton: !_isSelectionMode
+          ? Builder(
+              builder: (innerContext) {
+                return FloatingActionButton(
+                  onPressed: () {
+                    final tabIndex = _tabController.index;
+                    final entryType = [EntryType.word, EntryType.idiom, EntryType.phrasal][tabIndex];
+                    Navigator.of(innerContext).push(
+                      MaterialPageRoute(
+                        builder: (_) => AddEditEntryScreen(sessionId: widget.session.id, type: entryType),
+                      ),
+                    );
+                  },
+                  child: const Icon(Icons.add),
+                );
+              },
+            )
+          : null,
     );
   }
 
@@ -80,57 +147,93 @@ class SessionDetailScreen extends StatelessWidget {
       );
     }
     return ListView.builder(
+      key: PageStorageKey('entriesList_$_currentTab'),
       padding: const EdgeInsets.all(8),
       itemCount: entries.length,
       itemBuilder: (context, index) {
         final entry = entries[index];
-        return Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(entry.content, style: const TextStyle(fontWeight: FontWeight.bold)),
-                if (entry.pronounce.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      entry.pronounce,
-                      style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.blueGrey, fontSize: 14),
-                    ),
-                  ),
-              ],
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(entry.meaning),
-                if (entry.example.isNotEmpty)
-                  Text(
-                    '"${entry.example}"',
-                    style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
-                  ),
-                Text('Difficulty: ${entry.difficulty.toString().split('.').last}'),
-              ],
-            ),
-            trailing: PopupMenuButton<String>(
-              onSelected: (value) async {
-                if (value == 'edit') {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => AddEditEntryScreen(sessionId: sessionId, entry: entry),
-                    ),
-                  );
-                } else if (value == 'delete') {
-                  await service.deleteEntry(uid, sessionId, entry.id);
+        final selected = _selectedEntryIds.contains(entry.id);
+
+        return GestureDetector(
+          onLongPress: () {
+            setState(() {
+              _selectedEntryIds.add(entry.id);
+            });
+          },
+          onTap: () {
+            if (_isSelectionMode) {
+              setState(() {
+                if (selected) {
+                  _selectedEntryIds.remove(entry.id);
+                } else {
+                  _selectedEntryIds.add(entry.id);
                 }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'edit', child: Text('Edit')),
-                PopupMenuItem(value: 'delete', child: Text('Delete')),
-              ],
+              });
+            } else {
+              // Open edit dialog as usual
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AddEditEntryScreen(sessionId: sessionId, entry: entry),
+                ),
+              );
+            }
+          },
+          child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: selected ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 2) : BorderSide.none,
+            ),
+            color: selected ? Theme.of(context).colorScheme.primary.withOpacity(0.08) : null,
+            child: ListTile(
+              leading: _isSelectionMode
+                  ? Icon(selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                      color: selected ? Theme.of(context).colorScheme.primary : null)
+                  : null,
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(entry.content, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  if (entry.pronounce.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        entry.pronounce,
+                        style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.blueGrey, fontSize: 14),
+                      ),
+                    ),
+                ],
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(entry.meaning),
+                  if (entry.example.isNotEmpty)
+                    Text(
+                      '"${entry.example}"',
+                      style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
+                    ),
+                  Text('Difficulty: ${entry.difficulty.toString().split('.').last}'),
+                ],
+              ),
+              trailing: !_isSelectionMode
+                  ? PopupMenuButton<String>(
+                      onSelected: (value) async {
+                        if (value == 'edit') {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => AddEditEntryScreen(sessionId: sessionId, entry: entry),
+                            ),
+                          );
+                        } else if (value == 'delete') {
+                          await service.deleteEntry(uid, sessionId, entry.id);
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      ],
+                    )
+                  : null,
             ),
           ),
         );

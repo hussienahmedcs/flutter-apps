@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/models/session_model.dart';
 
 import '../providers/gamification_provider.dart';
 import '../providers/session_provider.dart';
@@ -164,8 +165,9 @@ class _HomeTab extends StatelessWidget {
             stories: stories,
             onTap: (id, type) {
               if (type == ActivityType.session) {
+                Session session = sessions.firstWhere((s) => s.id == id);
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => SessionDetailScreen(sessionId: id)),
+                  MaterialPageRoute(builder: (_) => SessionDetailScreen(session: session)),
                 );
               } else {
                 // navigate to story editing page

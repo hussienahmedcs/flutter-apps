@@ -15,8 +15,7 @@ enum SessionsTabType { list, add }
 /// pressing on a session reveals options to edit or delete it.
 class SessionsListScreen extends StatefulWidget {
   final SessionsTabType initialTab;
-  const SessionsListScreen({Key? key, this.initialTab = SessionsTabType.list})
-      : super(key: key);
+  const SessionsListScreen({super.key, this.initialTab = SessionsTabType.list});
 
   @override
   State<SessionsListScreen> createState() => _SessionsListScreenState();
@@ -68,8 +67,7 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
                   ),
                   child: ListTile(
                     title: Text(session.title),
-                    subtitle: Text(
-                        session.date.toLocal().toString().split(' ').first),
+                    subtitle: Text(session.date.toLocal().toString().split(' ').first),
                     trailing: PopupMenuButton<String>(
                       onSelected: (value) {
                         if (value == 'edit') {
@@ -92,7 +90,7 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => SessionDetailScreen(sessionId: session.id),
+                          builder: (_) => SessionDetailScreen(session: session),
                         ),
                       );
                     },
