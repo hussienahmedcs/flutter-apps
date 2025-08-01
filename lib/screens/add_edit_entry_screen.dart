@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/word_entry.dart';
 // import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../models/entry_model.dart';
 import '../providers/session_provider.dart';
 import '../services/firestore_service.dart';
 import '../providers/gamification_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import '../services/gemini_ocr_service.dart';
+import 'dart:io';
 
 /// Form for creating or editing a vocabulary entry.  The user chooses
 /// the type (word/idiom/phrasal verb), provides the term, its
@@ -31,6 +35,8 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
   late Difficulty _difficulty;
   // final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
+  bool _isScanning = false;
+  List<WordEntry> _ocrEntries = [];
 
   @override
   void initState() {
@@ -49,6 +55,57 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
     _meaningController.dispose();
     _exampleController.dispose();
     super.dispose();
+  }
+
+  Future<XFile?> _pickOrTakePhoto(BuildContext context) async {
+    return showModalBottomSheet<XFile>(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take Photo'),
+                onTap: () async {
+                  final picked = await ImagePicker().pickImage(source: ImageSource.camera);
+                  Navigator.of(ctx).pop(picked);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Pick from Gallery'),
+                onTap: () async {
+                  final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+                  Navigator.of(ctx).pop(picked);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _scanImage() async {
+    final picked = await _pickOrTakePhoto(context);
+    if (picked != null) {
+      setState(() => _isScanning = true);
+
+      final ocrService = GeminiOcrService(context: context);
+      final List<WordEntry> entries = await ocrService.extractWordsFromImage(File(picked.path));
+
+      setState(() {
+        _isScanning = false;
+        _ocrEntries = entries;
+      });
+
+      if (entries.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No words found.')),
+        );
+      }
+    }
   }
 
   Future<void> _startListening() async {
@@ -103,8 +160,82 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
     }
     gamification.addXp(xp);
     gamification.registerDailyActivity();
+
+    //Clear Form
+    setState(() {
+      _contentController.clear();
+      _meaningController.clear();
+      _exampleController.clear();
+    });
     // ignore: use_build_context_synchronously
-    Navigator.of(context).pop();
+    if (_ocrEntries.isEmpty) Navigator.of(context).pop();
+  }
+
+  void _showSavingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 16),
+              const Text("Saving..."),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _hideSavingDialog() {
+    Navigator.of(context, rootNavigator: true).pop();
+  }
+
+  void _saveAll() async {
+    if (_ocrEntries.isEmpty) return;
+
+    _showSavingDialog(); // Show loader
+
+    try {
+      final uid = Provider.of<SessionProvider>(context, listen: false).sessions.first.userId;
+
+      final service = FirestoreService();
+      final gamification = Provider.of<GamificationProvider>(context, listen: false);
+      int totalXp = 0;
+
+      for (final entry in _ocrEntries) {
+        final newEntry = Entry(
+          id: '', // Let Firestore assign ID
+          sessionId: widget.sessionId,
+          type: _type, // Or EntryType.word if you want fixed type
+          content: entry.word,
+          meaning: entry.meaning,
+          example: entry.example,
+          difficulty: _difficulty,
+          addedAt: DateTime.now(),
+        );
+        await service.upsertEntry(uid, widget.sessionId, newEntry);
+        totalXp += newEntry.type == EntryType.word ? 10 : 20;
+      }
+
+      gamification.addXp(totalXp);
+      gamification.registerDailyActivity();
+
+      setState(() {
+        _ocrEntries.clear();
+      });
+
+      // Optionally, show a confirmation/snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("All scanned entries saved!")),
+      );
+      Navigator.of(context).pop();
+    } finally {
+      _hideSavingDialog(); // Always hide loader, even on error
+    }
   }
 
   @override
@@ -141,10 +272,12 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
                 decoration: InputDecoration(
                   labelText: 'Content',
                   border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(_isListening ? Icons.mic_off : Icons.mic),
-                    onPressed: _isListening ? _stopListening : _startListening,
-                  ),
+                  suffixIcon: widget.entry == null
+                      ? IconButton(
+                          icon: Icon(Icons.image_search),
+                          onPressed: _scanImage,
+                        )
+                      : null,
                 ),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
@@ -196,8 +329,70 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _save,
-                child: const Text('Save'),
+                child: Text(_ocrEntries.isNotEmpty ? 'Save & Next' : 'Save'),
               ),
+              if (_ocrEntries.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.save_alt),
+                    label: const Text('Save All Scanned Entries'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    onPressed: _saveAll,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  "Scanned Entries:",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: _ocrEntries.length,
+                  itemBuilder: (context, index) {
+                    final entry = _ocrEntries[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      child: ListTile(
+                        title: Text(entry.word, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Meaning: ${entry.meaning}"),
+                            if (entry.example.isNotEmpty) Text("Example: ${entry.example}"),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              tooltip: "Delete",
+                              onPressed: () {
+                                setState(() => _ocrEntries.removeAt(index));
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.download, color: Colors.blue),
+                              tooltip: "Use",
+                              onPressed: () {
+                                setState(() {
+                                  _contentController.text = entry.word;
+                                  _meaningController.text = entry.meaning;
+                                  _exampleController.text = entry.example;
+                                  _ocrEntries.removeAt(index);
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ],
           ),
         ),

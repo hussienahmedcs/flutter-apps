@@ -9,25 +9,49 @@ import '../providers/auth_provider.dart';
 import '../providers/gamification_provider.dart';
 
 class FlashcardsScreen extends StatefulWidget {
-  const FlashcardsScreen({super.key});
+  const FlashcardsScreen({Key? key}) : super(key: key);
 
   @override
-  State<FlashcardsScreen> createState() => _FlashcardsScreenState();
+  State<FlashcardsScreen> createState() => FlashcardsScreenState();
 }
 
-class _FlashcardsScreenState extends State<FlashcardsScreen> {
+class FlashcardsScreenState extends State<FlashcardsScreen> {
   List<Entry> _entries = [];
   List<String> _selectedSessionIds = [];
+  List<Map<String, dynamic>> _sessions = []; // session list (id + name)
+
   int _currentIndex = 0;
   bool _loading = true;
   bool _error = false;
   int _earnedXp = 0;
 
+  void reset() {
+    // Reset any variables you want, e.g.:
+    if (!mounted) return;
+    setState(() {
+      _currentIndex = 0;
+      _selectedSessionIds = [];
+      // reload sessions/entries if needed
+    });
+    _loadSessions().then((_) => _loadEntries());
+  }
+
   @override
   void initState() {
     super.initState();
-    _loadEntries();
-    // _showSessionSelector();
+    _loadSessions().then((_) => _loadEntries());
+  }
+
+  Future<void> _loadSessions() async {
+    if (!mounted) return;
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
+    if (user == null) return;
+
+    final query = await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('sessions').get();
+
+    setState(() {
+      _sessions = query.docs.map((doc) => {'id': doc.id, 'name': doc['title'] ?? 'Untitled'}).toList();
+    });
   }
 
   /// Step 1: Show a dialog with multi-select session checkboxes
@@ -110,9 +134,9 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
       Query query = FirebaseFirestore.instance.collectionGroup('entries').where('user_id', isEqualTo: user.uid);
 
       // Add session filter only if selectedSessionIds is not empty
-      if (_selectedSessionIds.isNotEmpty) {
-        query = query.where('session_id', whereIn: _selectedSessionIds);
-      }
+      // if (_selectedSessionIds.isNotEmpty) {
+      query = query.where('session_id', whereIn: _selectedSessionIds.isEmpty ? ['-1'] : _selectedSessionIds);
+      // }
 
       final querySnapshot = await query.get();
       final entries =
@@ -123,6 +147,7 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
         _loading = false;
       });
     } catch (e) {
+      print(e.toString());
       setState(() {
         _error = true;
         _loading = false;
@@ -147,20 +172,23 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final total = _entries.length;
-    final isFinished = _currentIndex >= total;
+    return Material(
+      // Ensures Material context for chips, etc.
+      color: Colors.transparent,
+      child: Builder(
+        builder: (context) {
+          if (_loading) return const Center(child: CircularProgressIndicator());
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Flashcards')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error
-              ? _buildErrorState()
-              : _entries.isEmpty
-                  ? _buildEmptyState()
-                  : isFinished
-                      ? _buildSummary(context)
-                      : _buildCard(context),
+          if (_sessions.isEmpty) return _buildNoSessionsState(context);
+
+          if (_selectedSessionIds.isEmpty) return _buildPromptSelectSessions(context);
+
+          if (_entries.isEmpty) return _buildSessionHasNoWordsState(context);
+
+          final isFinished = _currentIndex >= _entries.length;
+          return isFinished ? _buildSummary(context) : _buildCard(context);
+        },
+      ),
     );
   }
 
@@ -174,6 +202,9 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
 
     return Column(
       children: [
+        // Session Selector
+        if (_sessions.isNotEmpty) ...[const SizedBox(height: 32), _buildSessionChips()],
+
         // Progress bar
         LinearProgressIndicator(
           value: (_currentIndex + 1) / _entries.length,
@@ -237,6 +268,106 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSessionChips({bool wrap = false}) {
+    if (_sessions.isEmpty) return const SizedBox.shrink();
+
+    final chipList = _sessions.map((session) {
+      final isSelected = _selectedSessionIds.contains(session['id']);
+      return Padding(
+        padding: const EdgeInsets.only(right: 8, bottom: 8),
+        child: FilterChip(
+          label: Text(session['name']),
+          selected: isSelected,
+          showCheckmark: true,
+          selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.18),
+          checkmarkColor: Theme.of(context).colorScheme.primary,
+          labelStyle: TextStyle(
+            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).textTheme.bodyMedium?.color,
+            fontWeight: FontWeight.w600,
+          ),
+          onSelected: (selected) {
+            setState(() {
+              if (selected) {
+                _selectedSessionIds.add(session['id']);
+              } else {
+                _selectedSessionIds.remove(session['id']);
+              }
+            });
+            _loadEntries(); // reload entries when selection changes
+          },
+        ),
+      );
+    }).toList();
+
+    if (wrap) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: chipList,
+        ),
+      );
+    } else {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(children: chipList),
+      );
+    }
+  }
+
+  Widget _buildSessionHasNoWordsState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('This session is empty. Please add words first.', style: TextStyle(fontSize: 18)),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              // Navigate to add word entry
+              Navigator.of(context).pushNamed('/sessions'); // Or to your session detail
+            },
+            child: const Text('Add Words to Session'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPromptSelectSessions(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('Select a session to review cards.', style: TextStyle(fontSize: 18)),
+          const SizedBox(height: 16),
+          _buildSessionChips(wrap: true), // Your horizontal chips selector
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoSessionsState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('No sessions created yet!', style: TextStyle(fontSize: 18)),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              // Navigate to session creation page
+              Navigator.of(context).pushNamed('/sessions'); // Or your session creation screen
+            },
+            child: const Text('Create your first session'),
+          ),
+        ],
+      ),
     );
   }
 

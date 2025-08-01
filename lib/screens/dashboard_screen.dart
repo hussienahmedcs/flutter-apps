@@ -8,9 +8,9 @@ import '../widgets/xp_progress_ring.dart';
 import '../widgets/streak_counter.dart';
 import '../widgets/quick_actions_grid.dart';
 import '../widgets/recent_activity_feed.dart';
+import './flashcards_screen.dart';
 import 'sessions_list_screen.dart';
 import 'session_detail_screen.dart';
-import 'flashcards_screen.dart';
 import 'story_builder_screen.dart';
 import 'my_stories_screen.dart';
 import 'profile_screen.dart';
@@ -41,12 +41,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> pages = [
-      const _HomeTab(),
-      const SessionsListScreen(),
-      const FlashcardsScreen(),
-      const MyStoriesScreen(),
-      const ProfileScreen(),
+    final GlobalKey<FlashcardsScreenState> flashcardKey = GlobalKey<FlashcardsScreenState>();
+    final List<Map<String, dynamic>> pages = [
+      {"screen": const _HomeTab(), "key": null},
+      {"screen": const SessionsListScreen(), "key": null},
+      {"screen": FlashcardsScreen(key: flashcardKey), "key": flashcardKey},
+      {"screen": const MyStoriesScreen(), "key": null},
+      {"screen": const ProfileScreen(), "key": null},
     ];
 
     return WillPopScope(
@@ -73,7 +74,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Scaffold(
         body: IndexedStack(
           index: _index,
-          children: pages,
+          children: pages.map((e) => e['screen'] as Widget).toList(),
         ),
         bottomNavigationBar: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
@@ -82,6 +83,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             setState(() {
               _index = value;
             });
+            final key = pages[value]['key'];
+            if (key != null && key.currentState != null) {
+              key.currentState!.reset();
+            }
           },
           items: const [
             BottomNavigationBarItem(
