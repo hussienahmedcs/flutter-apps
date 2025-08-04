@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/gamification_model.dart';
+import '../data/models/gamification_model.dart';
 
 /// Displays the current streak with a flame icon and day count.  On
 /// tap a heatmap dialog appears showing the last 30 days of activity.

@@ -2,14 +2,15 @@ import 'package:flip_card/flip_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:wordstory/data/models/center.dart';
+import 'package:wordstory/providers/app_auth_provider.dart';
 import 'package:wordstory/screens/dashboard_screen.dart';
 
-import '../models/entry_model.dart';
-import '../providers/auth_provider.dart';
+import '../data/models/entry_model.dart';
 import '../providers/gamification_provider.dart';
 
 class FlashcardsScreen extends StatefulWidget {
-  const FlashcardsScreen({Key? key}) : super(key: key);
+  const FlashcardsScreen({super.key});
 
   @override
   State<FlashcardsScreen> createState() => FlashcardsScreenState();
@@ -18,32 +19,33 @@ class FlashcardsScreen extends StatefulWidget {
 class FlashcardsScreenState extends State<FlashcardsScreen> {
   List<Entry> _entries = [];
   List<String> _selectedSessionIds = [];
-  List<Map<String, dynamic>> _sessions = []; // session list (id + name)
+  List<Map<String, dynamic>> _sessions = [];
 
   int _currentIndex = 0;
   bool _loading = true;
   bool _error = false;
   int _earnedXp = 0;
+  Role? role;
+  bool showPrevBtn = false;
+  bool showNextBtn = false;
 
   void reset() {
-    // Reset any variables you want, e.g.:
     if (!mounted) return;
     setState(() {
       _currentIndex = 0;
       _selectedSessionIds = [];
-      // reload sessions/entries if needed
     });
-    _loadSessions().then((_) => _loadEntries());
   }
 
   @override
   void initState() {
     super.initState();
-    _loadSessions().then((_) => _loadEntries());
+    role = Role.user;
+    _loadSessions();
   }
 
   Future<void> _loadSessions() async {
-    final user = Provider.of<AuthProvider>(context, listen: false).user;
+    final user = Provider.of<AppAuthProvider>(context, listen: false).user;
     if (user == null) return;
 
     final query = await FirebaseFirestore.instance
@@ -53,85 +55,24 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
         .orderBy('date', descending: true)
         .get();
 
-    if (!mounted) return; // <-- Check right before setState!
+    if (!mounted) return;
     setState(() {
       _sessions = query.docs.map((doc) => {'id': doc.id, 'name': doc['title'] ?? 'Untitled'}).toList();
+      _loading = false;
     });
   }
 
-  /// Step 1: Show a dialog with multi-select session checkboxes
-  Future<void> _showSessionSelector() async {
-    final user = Provider.of<AuthProvider>(context, listen: false).user;
-    if (user == null) return;
-
-    final sessionsSnapshot =
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('sessions').get();
-
-    final allSessions =
-        sessionsSnapshot.docs.map((doc) => {'id': doc.id, 'title': doc['title'] ?? 'Untitled'}).toList();
-
-    List<String> tempSelected = List.from(_selectedSessionIds);
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text("Select Sessions"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: allSessions.length,
-              itemBuilder: (context, index) {
-                final session = allSessions[index];
-                return CheckboxListTile(
-                  title: Text(session['title']),
-                  value: tempSelected.contains(session['id']),
-                  onChanged: (selected) {
-                    setState(() {
-                      if (selected == true) {
-                        tempSelected.add(session['id']);
-                      } else {
-                        tempSelected.remove(session['id']);
-                      }
-                    });
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (tempSelected.isEmpty) return;
-                setState(() {
-                  _selectedSessionIds = tempSelected;
-                });
-                Navigator.of(ctx).pop();
-                _loadEntries();
-              },
-              child: const Text("Load"),
-            )
-          ],
-        );
-      },
-    );
-  }
-
-  /// Step 2: Load entries only from selected sessions
   Future<void> _loadEntries() async {
-    if (!mounted) return; // Good practice, but see below!
-
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = false;
     });
 
     try {
-      final user = Provider.of<AuthProvider>(context, listen: false).user;
+      print(Provider.of<AppAuthProvider>(context, listen: false).isLoggedIn);
+      final user = Provider.of<AppAuthProvider>(context, listen: false).user;
       if (user == null) {
-        if (!mounted) return;
         setState(() {
           _entries = [];
           _loading = false;
@@ -140,15 +81,12 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
       }
 
       Query query = FirebaseFirestore.instance.collectionGroup('entries').where('user_id', isEqualTo: user.uid);
-
-      query = query.where(
-        'session_id',
-        whereIn: _selectedSessionIds.isEmpty ? ['-1'] : _selectedSessionIds,
-      );
+      if (_selectedSessionIds.isNotEmpty) {
+        query = query.where('session_id', whereIn: _selectedSessionIds);
+      }
 
       final querySnapshot = await query.get();
-
-      if (!mounted) return; // <--- Add this after await
+      if (!mounted) return;
       final entries =
           querySnapshot.docs.map((doc) => Entry.fromMap(doc.id, doc.data() as Map<String, dynamic>)).toList();
       entries.shuffle();
@@ -156,10 +94,11 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
       setState(() {
         _entries = entries;
         _loading = false;
+        _currentIndex = 0;
       });
     } catch (e) {
       print(e.toString());
-      if (!mounted) return; // <--- Also check here before setState
+      if (!mounted) return;
       setState(() {
         _error = true;
         _loading = false;
@@ -168,7 +107,7 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
   }
 
   void _finishSession() {
-    int xp = 30; // base reward
+    int xp = 30;
     for (final entry in _entries) {
       xp += entry.type == EntryType.word ? 10 : 20;
     }
@@ -184,22 +123,138 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      // Ensures Material context for chips, etc.
-      color: Colors.transparent,
-      child: Builder(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Flashcards"),
+        actions: [],
+      ),
+      body: Builder(
         builder: (context) {
           if (_loading) return const Center(child: CircularProgressIndicator());
 
           if (_sessions.isEmpty) return _buildNoSessionsState(context);
 
-          if (_selectedSessionIds.isEmpty) return _buildPromptSelectSessions(context);
+          if (_entries.isEmpty && _selectedSessionIds.isNotEmpty) return _buildSessionHasNoWordsState(context);
 
-          if (_entries.isEmpty) return _buildSessionHasNoWordsState(context);
+          if (_entries.isEmpty && _selectedSessionIds.isEmpty) return _buildPromptSelectSessions(context);
 
           final isFinished = _currentIndex >= _entries.length;
           return isFinished ? _buildSummary(context) : _buildCard(context);
         },
+      ),
+    );
+  }
+
+  Widget _buildSessionChips({bool wrap = false}) {
+    if (_sessions.isEmpty) return const SizedBox.shrink();
+
+    return StatefulBuilder(
+      builder: (context, setInnerState) {
+        final chipList = _sessions.map((session) {
+          final isSelected = _selectedSessionIds.contains(session['id']);
+          return Padding(
+            padding: const EdgeInsets.only(right: 8, bottom: 8),
+            child: FilterChip(
+              label: Text(session['name']),
+              selected: isSelected,
+              showCheckmark: true,
+              selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.18),
+              checkmarkColor: Theme.of(context).colorScheme.primary,
+              labelStyle: TextStyle(
+                color:
+                    isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).textTheme.bodyMedium?.color,
+                fontWeight: FontWeight.w600,
+              ),
+              onSelected: (selected) {
+                setInnerState(() {
+                  if (selected) {
+                    _selectedSessionIds.add(session['id']);
+                  } else {
+                    _selectedSessionIds.remove(session['id']);
+                  }
+                });
+              },
+            ),
+          );
+        }).toList();
+
+        if (wrap) {
+          return Column(
+            children: [
+              if (_selectedSessionIds.isNotEmpty)
+                TextButton(
+                  onPressed: _loadEntries,
+                  child: const Text(
+                    "Start",
+                    // style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Wrap(spacing: 8, runSpacing: 8, children: chipList),
+              ),
+            ],
+          );
+        } else {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(children: chipList),
+          );
+        }
+      },
+    );
+  }
+
+  /// --- Other states (same as your code) ---
+  Widget _buildPromptSelectSessions(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          const SizedBox(height: 20),
+          const Text('Select sessions to review cards.', style: TextStyle(fontSize: 18)),
+          const SizedBox(height: 16),
+          _buildSessionChips(wrap: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoSessionsState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('No sessions created yet!', style: TextStyle(fontSize: 18)),
+          if (role == Role.admin) ...[
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pushNamed('/sessions');
+              },
+              child: const Text('Create your first session'),
+            ),
+          ]
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSessionHasNoWordsState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('This session is empty. Please add words first.', style: TextStyle(fontSize: 18)),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pushNamed('/sessions');
+            },
+            child: const Text('Add Words to Session'),
+          ),
+        ],
       ),
     );
   }
@@ -280,106 +335,6 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSessionChips({bool wrap = false}) {
-    if (_sessions.isEmpty) return const SizedBox.shrink();
-
-    final chipList = _sessions.map((session) {
-      final isSelected = _selectedSessionIds.contains(session['id']);
-      return Padding(
-        padding: const EdgeInsets.only(right: 8, bottom: 8),
-        child: FilterChip(
-          label: Text(session['name']),
-          selected: isSelected,
-          showCheckmark: true,
-          selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.18),
-          checkmarkColor: Theme.of(context).colorScheme.primary,
-          labelStyle: TextStyle(
-            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).textTheme.bodyMedium?.color,
-            fontWeight: FontWeight.w600,
-          ),
-          onSelected: (selected) {
-            setState(() {
-              if (selected) {
-                _selectedSessionIds.add(session['id']);
-              } else {
-                _selectedSessionIds.remove(session['id']);
-              }
-            });
-            _loadEntries(); // reload entries when selection changes
-          },
-        ),
-      );
-    }).toList();
-
-    if (wrap) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: chipList,
-        ),
-      );
-    } else {
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(children: chipList),
-      );
-    }
-  }
-
-  Widget _buildSessionHasNoWordsState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('This session is empty. Please add words first.', style: TextStyle(fontSize: 18)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              // Navigate to add word entry
-              Navigator.of(context).pushNamed('/sessions'); // Or to your session detail
-            },
-            child: const Text('Add Words to Session'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPromptSelectSessions(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('Select a session to review cards.', style: TextStyle(fontSize: 18)),
-          const SizedBox(height: 16),
-          _buildSessionChips(wrap: true), // Your horizontal chips selector
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNoSessionsState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('No sessions created yet!', style: TextStyle(fontSize: 18)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              // Navigate to session creation page
-              Navigator.of(context).pushNamed('/sessions'); // Or your session creation screen
-            },
-            child: const Text('Create your first session'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -479,38 +434,21 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
             },
             child: const Text('Back to Home'),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('No entries to review.', style: TextStyle(fontSize: 18)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadEntries,
-            child: const Text('Retry'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('Failed to load entries.', style: TextStyle(fontSize: 18)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadEntries,
-            child: const Text('Retry'),
-          ),
+          if (showPrevBtn || showNextBtn)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () {},
+                  child: const Text('Previous Session'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () {},
+                  child: const Text('Next Session'),
+                ),
+              ],
+            )
         ],
       ),
     );

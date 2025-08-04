@@ -1,16 +1,16 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/achievement_model.dart';
-import '../providers/auth_provider.dart';
+import '../providers/app_auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/gamification_provider.dart';
 import '../services/auth_service.dart';
 import '../widgets/achievement_badge.dart';
-import '../data/achievements.dart';
+import '../data/config/achievements.dart';
 
 /// User profile and settings screen.  Displays the current user's
 /// information, allows editing the display name and avatar, toggling
@@ -33,6 +33,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _deleteAccount() async {
+    final authProvider = context.read<AppAuthProvider>();
+    final user = authProvider.user;
+    if (user == null) return;
+
+    try {
+      await authProvider.deleteAccount();
+      if (mounted) {
+        // Navigator.of(context).pop(); // Go back or to splash/login screen
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account deleted successfully.')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        // User must re-authenticate
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in again to delete your account.')),
+        );
+        // Optionally, force sign-out and let user log in again
+        await authProvider.signOut();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete account: ${e.message}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete account: $e')),
+      );
+    }
+  }
+
+  void _confirmDeleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text('This action cannot be undone. Are you sure you want to delete your account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteAccount();
+    }
+  }
+
   Future<void> _pickAvatar() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null && result.files.single.path != null) {
@@ -50,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     final themeProvider = context.watch<ThemeProvider>();
     final gamification = context.watch<GamificationProvider>().stats;
     final user = authProvider.user;
@@ -72,9 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 CircleAvatar(
                   radius: 40,
-                  backgroundImage: user.photoURL != null
-                      ? NetworkImage(user.photoURL!) as ImageProvider
-                      : null,
+                  backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) as ImageProvider : null,
                   child: user.photoURL == null ? const Icon(Icons.person, size: 40) : null,
                 ),
                 const SizedBox(width: 16),
@@ -101,8 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             )
                           : Row(
                               children: [
-                                Text(user.displayName ?? 'Unnamed',
-                                    style: Theme.of(context).textTheme.headlineSmall),
+                                Text(user.displayName ?? 'Unnamed', style: Theme.of(context).textTheme.headlineSmall),
                                 IconButton(
                                   icon: const Icon(Icons.edit),
                                   onPressed: () {
@@ -174,6 +231,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onTap: () async {
                 await authProvider.signOut();
               },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete Account', style: TextStyle(color: Colors.red)),
+              onTap: _confirmDeleteAccount,
             ),
           ],
         ),

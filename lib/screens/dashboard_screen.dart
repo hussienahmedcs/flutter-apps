@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:wordstory/models/session_model.dart';
-
+import 'package:wordstory/data/models/center.dart';
+import 'package:wordstory/data/models/session_model.dart';
+import 'package:wordstory/providers/app_auth_provider.dart';
+import 'package:wordstory/screens/center_details_page.dart';
+import 'package:wordstory/screens/exam/exam_page.dart';
+import 'package:wordstory/screens/manage_center_page.dart';
 import '../providers/gamification_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/story_provider.dart';
@@ -21,7 +25,7 @@ import 'profile_screen.dart';
 /// practice module, stories list and profile.  Each tab is
 /// implemented as a separate widget to keep the build method clean.
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   static void switchToHome(BuildContext context) {
     final state = context.findAncestorStateOfType<_DashboardScreenState>();
@@ -123,17 +127,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
 /// recent feed navigates to their detail pages using a
 /// `Navigator.push` call on the root context.
 class _HomeTab extends StatelessWidget {
-  const _HomeTab({Key? key}) : super(key: key);
+  const _HomeTab();
   @override
   Widget build(BuildContext context) {
+    print('>>>>>>>>>>>>>>>>>>>>>');
     final gamification = context.watch<GamificationProvider>().stats;
     final sessions = context.watch<SessionProvider>().sessions;
     final stories = context.watch<StoryProvider>().stories;
+    final user = context.watch<AppAuthProvider>().user;
+
+    final isAdmin = false; //user?.role == Role.admin;
+    final isInstructor = false; // user?.role == Role.instructor;
+    final isPendingLearner = false; //user?.role == Role.pendingLearner;
+    final isLearner = false; //user?.role == Role.learner;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          SizedBox(
+            height: 32,
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -143,21 +158,71 @@ class _HomeTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           QuickActionsGrid(
-            onAddSession: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => SessionsListScreen(initialTab: SessionsTabType.add),
-                ),
-              );
-            },
-            onReview: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FlashcardsScreen()));
-            },
-            onStoryBuilder: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const StoryBuilderScreen()),
-              );
-            },
+            icons: [
+              {
+                'icon': Icons.add_circle_outline,
+                'label': 'New Session',
+                'onTap': () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SessionsListScreen(initialTab: SessionsTabType.add),
+                    ),
+                  );
+                },
+                'enabled': isAdmin || isInstructor,
+              },
+              {
+                'icon': Icons.style,
+                'label': 'Review',
+                'onTap': () {
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FlashcardsScreen()));
+                },
+                'enabled': true,
+              },
+              {
+                'icon': Icons.create,
+                'label': 'Story Builder',
+                'onTap': () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const StoryBuilderScreen()),
+                  );
+                },
+                'enabled': true,
+              },
+              {
+                'icon': Icons.quiz,
+                'label': 'Exam',
+                'onTap': () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ExamPage()),
+                  );
+                },
+                'enabled': true,
+              },
+              {
+                'icon': Icons.settings,
+                'label': 'Manage Center',
+                'onTap': () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => ManageCenterPage(
+                              centerCode: '',
+                            )),
+                  );
+                },
+                'enabled': isAdmin,
+              },
+              {
+                'icon': Icons.info_outline,
+                'label': 'Center Details',
+                'onTap': () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => CenterDetailsPage(centerCode: '')),
+                  );
+                },
+                'enabled': isLearner || isPendingLearner,
+              },
+            ],
           ),
           const SizedBox(height: 24),
           RecentActivityFeed(

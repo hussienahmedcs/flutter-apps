@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/session_model.dart';
+import '../data/models/session_model.dart';
 import '../providers/session_provider.dart';
 import 'add_edit_session_screen.dart';
 import 'session_detail_screen.dart';

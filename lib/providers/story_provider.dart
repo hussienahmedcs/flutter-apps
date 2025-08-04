@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:wordstory/data/interfaces/user_interface.dart';
 
-import '../models/story_model.dart';
+import '../data/models/story_model.dart';
 import '../services/firestore_service.dart';
 
 /// Provides access to the user's stories.  When the authenticated
@@ -17,7 +18,7 @@ class StoryProvider with ChangeNotifier {
 
   List<Story> get stories => _stories;
 
-  void updateUser(User? user) {
+  void updateUser(UserInterface? user) {
     _uid = user?.uid;
     _sub?.cancel();
     if (_uid != null) {

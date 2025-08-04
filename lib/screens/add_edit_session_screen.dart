@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/session_model.dart';
+import 'package:wordstory/providers/app_auth_provider.dart';
+import '../data/models/session_model.dart';
 import '../providers/session_provider.dart';
-import '../providers/auth_provider.dart';
 
 /// Form screen used to create or edit a vocabulary session.  Users
 /// supply a title, date and optional notes.  When editing, fields
@@ -55,7 +55,7 @@ class _AddEditSessionScreenState extends State<AddEditSessionScreen> {
   void _save() async {
     if (!_formKey.currentState!.validate()) return;
     final provider = context.read<SessionProvider>();
-    final uid = Provider.of<AuthProvider>(context, listen: false).user?.uid ?? '';
+    final uid = Provider.of<AppAuthProvider>(context, listen: false).user?.uid ?? '';
     final newSession = Session(
       id: widget.session?.id ?? '',
       userId: uid,

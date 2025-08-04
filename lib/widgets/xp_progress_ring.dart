@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/gamification_model.dart';
+import '../data/models/gamification_model.dart';
 import '../theme.dart';
 
 /// Displays a circular progress ring representing the user's current

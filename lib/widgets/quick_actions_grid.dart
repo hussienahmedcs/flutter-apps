@@ -5,36 +5,30 @@ import 'package:flutter/material.dart';
 /// callback when tapped.  The caller supplies the functions to
 /// navigate to the appropriate screens.
 class QuickActionsGrid extends StatelessWidget {
-  final VoidCallback onAddSession;
-  final VoidCallback onReview;
-  final VoidCallback onStoryBuilder;
+  // final VoidCallback onAddSession;
+  // final VoidCallback onReview;
+  // final VoidCallback onStoryBuilder;
+  // final VoidCallback onExam;
+  final List<Map<String, dynamic>> icons;
 
-  const QuickActionsGrid({
-    Key? key,
-    required this.onAddSession,
-    required this.onReview,
-    required this.onStoryBuilder,
-  }) : super(key: key);
+  const QuickActionsGrid(
+      {super.key,
+      // required this.onAddSession,
+      // required this.onReview,
+      // required this.onStoryBuilder,
+      // required this.onExam,
+      required this.icons});
 
   @override
   Widget build(BuildContext context) {
-    final List<_ActionTile> tiles = [
-      _ActionTile(
-        icon: Icons.add_circle_outline,
-        label: 'New Session',
-        onTap: onAddSession,
-      ),
-      _ActionTile(
-        icon: Icons.style,
-        label: 'Review',
-        onTap: onReview,
-      ),
-      _ActionTile(
-        icon: Icons.create,
-        label: 'Story Builder',
-        onTap: onStoryBuilder,
-      ),
-    ];
+    final List<_ActionTile> tiles = icons
+        .where((i) => i['enabled'] == true)
+        .map((i) => _ActionTile(
+              icon: i['icon'],
+              label: i['label'],
+              onTap: i['onTap'],
+            ))
+        .toList();
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -64,8 +58,7 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _ActionButton({Key? key, required this.icon, required this.label, required this.onTap})
-      : super(key: key);
+  const _ActionButton({Key? key, required this.icon, required this.label, required this.onTap}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return InkWell(

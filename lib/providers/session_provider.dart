@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:wordstory/data/interfaces/user_interface.dart';
 
-import '../models/session_model.dart';
+import '../data/models/session_model.dart';
 import '../services/firestore_service.dart';
 
 /// Handles loading and mutating vocabulary sessions.  When the
@@ -19,7 +20,7 @@ class SessionProvider with ChangeNotifier {
   /// Call this whenever the authenticated user changes.  Passing
   /// `null` clears the sessions list and cancels any active Firestore
   /// subscription.
-  void updateUser(User? user) {
+  void updateUser(UserInterface? user) {
     _uid = user?.uid;
     _sub?.cancel();
     if (_uid != null) {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/entry_model.dart';
-import '../providers/auth_provider.dart';
+import 'package:wordstory/providers/app_auth_provider.dart';
+import '../data/models/entry_model.dart';
 import '../services/firestore_service.dart';
 import 'add_edit_entry_screen.dart';
-import '../models/session_model.dart';
+import '../data/models/session_model.dart';
 
 /// Shows the details for a specific session, including all entries
 /// grouped by type (word, idiom, phrasal verb).  Users can add new
@@ -50,7 +50,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
+    final user = context.watch<AppAuthProvider>().user;
     if (user == null) {
       return const Scaffold(body: Center(child: Text('Not authenticated')));
     }
@@ -58,9 +58,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
 
     return Scaffold(
       appBar: AppBar(
-        title: _isSelectionMode
-            ? Text('Delete (${_selectedEntryIds.length})')
-            : Text(widget.session.title ?? 'Session Details'),
+        title: _isSelectionMode ? Text('Delete (${_selectedEntryIds.length})') : Text(widget.session.title),
         bottom: !_isSelectionMode
             ? TabBar(
                 controller: _tabController,

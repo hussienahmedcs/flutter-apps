@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 
-import 'providers/auth_provider.dart';
+import 'providers/app_auth_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/session_provider.dart';
 import 'providers/gamification_provider.dart';
@@ -32,17 +32,17 @@ class WordStoryApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => AppAuthProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProxyProvider<AuthProvider, SessionProvider>(
+        ChangeNotifierProxyProvider<AppAuthProvider, SessionProvider>(
           create: (_) => SessionProvider(),
           update: (_, auth, sessions) => sessions!..updateUser(auth.user),
         ),
-        ChangeNotifierProxyProvider<AuthProvider, GamificationProvider>(
+        ChangeNotifierProxyProvider<AppAuthProvider, GamificationProvider>(
           create: (_) => GamificationProvider(),
           update: (_, auth, gam) => gam!..updateUser(auth.user),
         ),
-        ChangeNotifierProxyProvider<AuthProvider, StoryProvider>(
+        ChangeNotifierProxyProvider<AppAuthProvider, StoryProvider>(
           create: (_) => StoryProvider(),
           update: (_, auth, story) => story!..updateUser(auth.user),
         ),
@@ -55,7 +55,7 @@ class WordStoryApp extends StatelessWidget {
             darkTheme: WordStoryTheme.darkTheme,
             themeMode: theme.themeMode,
             debugShowCheckedModeBanner: false,
-            home: Consumer<AuthProvider>(
+            home: Consumer<AppAuthProvider>(
               builder: (context, auth, _) {
                 if (auth.isLoading) {
                   return const Scaffold(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/achievement_model.dart';
+import '../data/models/achievement_model.dart';
 
 /// Visual representation of a single achievement.  If the achievement
 /// has been unlocked by the user, the badge is coloured with the

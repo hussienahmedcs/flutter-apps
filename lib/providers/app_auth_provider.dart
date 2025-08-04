@@ -1,27 +1,36 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:wordstory/data/interfaces/user_interface.dart';
+import 'package:wordstory/data/repositories/auth_repository.dart';
 import '../services/auth_service.dart';
 
 /// Provides authentication state and exposes actions for signing
 /// in/out and registering.  The provider listens to
 /// [`AuthService.authStateChanges`] and updates its state accordingly.
-class AuthProvider with ChangeNotifier {
+class AppAuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
+  final AuthRepository _authRepository = AuthRepository();
   StreamSubscription<User?>? _authSub;
-  User? _user;
+  UserInterface? _user;
   bool _loading = true;
 
-  AuthProvider() {
+  AppAuthProvider() {
     _authSub = _authService.authStateChanges.listen((user) {
-      _user = user;
+      // _user = user;
+      _user = user != null
+          ? UserInterface(user.uid, displayName: user.displayName, email: user.email, photoURL: user.photoURL,
+              deleteAccount: () async {
+              await user.delete();
+            })
+          : null;
       _loading = false;
       notifyListeners();
     });
   }
 
   /// Returns the currently signed in Firebase [User], or null if none.
-  User? get user => _user;
+  UserInterface? get user => _user;
 
   /// Indicates whether an authentication operation is currently in
   /// progress.  This is true on provider initialization until the
@@ -48,7 +57,7 @@ class AuthProvider with ChangeNotifier {
     _loading = true;
     notifyListeners();
     try {
-      await _authService.signUpWithEmail(email, password, displayName);
+      await _authRepository.signUpWithEmail(email, password, displayName);
     } finally {
       _loading = false;
       notifyListeners();
@@ -81,5 +90,10 @@ class AuthProvider with ChangeNotifier {
   void dispose() {
     _authSub?.cancel();
     super.dispose();
+  }
+
+  Future<void> deleteAccount() async {
+    if (user != null) await user!.deleteAccount();
+    await signOut();
   }
 }

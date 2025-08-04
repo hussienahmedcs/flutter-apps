@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/gamification_model.dart';
+import 'package:wordstory/data/interfaces/user_interface.dart';
+import '../data/models/gamification_model.dart';
 import '../services/firestore_service.dart';
 
 /// Tracks the user's XP, level, streak and achievements.  This provider
@@ -17,7 +18,7 @@ class GamificationProvider with ChangeNotifier {
   Gamification? get stats => _stats;
   bool get isLoading => _loading;
 
-  void updateUser(User? user) {
+  void updateUser(UserInterface? user) {
     _uid = user?.uid;
     if (_uid != null) {
       _load();

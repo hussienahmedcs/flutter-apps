@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:wordstory/data/word_entry.dart';
+import 'package:wordstory/data/models/word_entry.dart';
 // import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-import '../models/entry_model.dart';
+import '../data/models/entry_model.dart';
 import '../providers/session_provider.dart';
 import '../services/firestore_service.dart';
 import '../providers/gamification_provider.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import '../providers/app_auth_provider.dart';
 
 /// Login/registration page.  Users can either sign in with their
 /// email/password, register a new account, or authenticate via
@@ -29,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _submit(AuthProvider auth) async {
+  void _submit(AppAuthProvider auth) async {
     if (!_formKey.currentState!.validate()) return;
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -49,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
+    final auth = context.watch<AppAuthProvider>();
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(

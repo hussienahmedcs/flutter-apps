@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/story_provider.dart';
-import '../models/story_model.dart';
 import 'story_builder_screen.dart';
 
 /// Displays all of the user's saved stories.  Tapping on a story

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:wordstory/data/word_entry.dart';
+import 'package:wordstory/data/models/word_entry.dart';
 
 class GeminiOcrService {
   static const String apiKey = "AIzaSyCi0nEKnCBqTUd_i39pJBy2qm_EaaLdO7A";

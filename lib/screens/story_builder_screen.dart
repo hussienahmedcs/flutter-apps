@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/session_model.dart';
-import '../models/story_model.dart';
-import '../models/entry_model.dart';
+import '../data/models/session_model.dart';
+import '../data/models/story_model.dart';
+import '../data/models/entry_model.dart';
 import '../providers/session_provider.dart';
 import '../providers/story_provider.dart';
-import '../providers/auth_provider.dart';
+import '../providers/app_auth_provider.dart';
 import '../services/firestore_service.dart';
 import '../services/gemini_ocr_service.dart'; // Your Gemini/GPT AI service
 
@@ -100,7 +100,7 @@ class _StoryBuilderScreenState extends State<StoryBuilderScreen> {
 
     try {
       // Fetch all words from the selected sessions
-      final user = Provider.of<AuthProvider>(context, listen: false).user;
+      final user = Provider.of<AppAuthProvider>(context, listen: false).user;
       if (user == null) return;
 
       final service = FirestoreService();
@@ -144,7 +144,7 @@ class _StoryBuilderScreenState extends State<StoryBuilderScreen> {
       );
       return;
     }
-    final user = Provider.of<AuthProvider>(context, listen: false).user;
+    final user = Provider.of<AppAuthProvider>(context, listen: false).user;
     if (user == null) return;
     final storyProvider = Provider.of<StoryProvider>(context, listen: false);
 

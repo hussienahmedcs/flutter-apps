@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/session_model.dart';
-import '../models/entry_model.dart';
-import '../models/story_model.dart';
-import '../models/gamification_model.dart';
+import '../data/models/session_model.dart';
+import '../data/models/entry_model.dart';
+import '../data/models/story_model.dart';
+import '../data/models/gamification_model.dart';
 
 /// Abstraction over Firestore CRUD operations.  This class isolates
 /// database logic from the UI, making it easier to unit test and to

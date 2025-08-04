@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/session_model.dart';
-import '../models/story_model.dart';
+import '../data/models/session_model.dart';
+import '../data/models/story_model.dart';
 
 /// Displays a feed of recent sessions and stories sorted by date.  The
 /// feed shows up to [maxItems] items; if there are no items a
