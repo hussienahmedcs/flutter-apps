@@ -49,7 +49,7 @@ class AppUser {
     }
 
     return AppUser(
-      id: id,
+      id: map['id'] ?? id ?? '',
       name: map['name'] ?? '',
       email: map['email'] ?? '',
       avatarUrl: map['avatarUrl'] ?? map['avatar'], // support both keys
@@ -85,6 +85,7 @@ class AppUser {
     }
 
     return {
+      'id': id,
       'name': name,
       'email': email,
       'avatarUrl': avatarUrl,
@@ -102,6 +103,7 @@ class AppUser {
 
   /// CopyWith for immutability updates
   AppUser copyWith({
+    String? id,
     String? name,
     String? email,
     String? avatarUrl,
@@ -114,7 +116,7 @@ class AppUser {
     bool? syncEnabled,
   }) {
     return AppUser(
-      id: id,
+      id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
       avatarUrl: avatarUrl ?? this.avatarUrl,

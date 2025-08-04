@@ -4,11 +4,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/interfaces/user_interface.dart';
 
 import '../providers/app_auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/gamification_provider.dart';
-import '../services/auth_service.dart';
 import '../widgets/achievement_badge.dart';
 import '../data/config/achievements.dart';
 
@@ -33,13 +33,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _deleteAccount() async {
-    final authProvider = context.read<AppAuthProvider>();
-    final user = authProvider.user;
-    if (user == null) return;
-
+  Future<void> _deleteAccount(UserInterface user) async {
     try {
-      await authProvider.deleteAccount();
+      await user.deleteAccount();
       if (mounted) {
         // Navigator.of(context).pop(); // Go back or to splash/login screen
         ScaffoldMessenger.of(context).showSnackBar(
@@ -53,7 +49,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SnackBar(content: Text('Please sign in again to delete your account.')),
         );
         // Optionally, force sign-out and let user log in again
-        await authProvider.signOut();
+        await user.signOut();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to delete account: ${e.message}')),
@@ -66,7 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _confirmDeleteAccount() async {
+  void _confirmDeleteAccount(UserInterface user) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -89,22 +85,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirmed == true) {
-      await _deleteAccount();
+      await _deleteAccount(user);
     }
   }
 
-  Future<void> _pickAvatar() async {
+  Future<void> _pickAvatar(UserInterface user) async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null && result.files.single.path != null) {
       final file = File(result.files.single.path!);
-      final authService = AuthService();
-      await authService.updateProfile(avatar: file);
+      await user.updateProfile(avatar: file);
     }
   }
 
-  void _updateName() async {
-    final authService = AuthService();
-    await authService.updateProfile(displayName: _nameController.text.trim());
+  void _updateName(UserInterface user) async {
+    await user.updateProfile(displayName: _nameController.text.trim());
     setState(() => _editingName = false);
   }
 
@@ -153,7 +147,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.check),
-                                  onPressed: _updateName,
+                                  onPressed: () => _updateName(user),
                                 ),
                               ],
                             )
@@ -177,7 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.camera_alt),
-                  onPressed: _pickAvatar,
+                  onPressed: () => _pickAvatar(user),
                 ),
               ],
             ),
@@ -229,13 +223,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               leading: const Icon(Icons.logout),
               title: const Text('Sign Out'),
               onTap: () async {
-                await authProvider.signOut();
+                await user.signOut();
               },
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
               title: const Text('Delete Account', style: TextStyle(color: Colors.red)),
-              onTap: _confirmDeleteAccount,
+              onTap: () => _confirmDeleteAccount(user),
             ),
           ],
         ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:wordstory/data/models/center.dart';
 import 'package:wordstory/data/models/session_model.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 import 'package:wordstory/screens/center_details_page.dart';
@@ -134,12 +133,7 @@ class _HomeTab extends StatelessWidget {
     final gamification = context.watch<GamificationProvider>().stats;
     final sessions = context.watch<SessionProvider>().sessions;
     final stories = context.watch<StoryProvider>().stories;
-    final user = context.watch<AppAuthProvider>().user;
-
-    final isAdmin = false; //user?.role == Role.admin;
-    final isInstructor = false; // user?.role == Role.instructor;
-    final isPendingLearner = false; //user?.role == Role.pendingLearner;
-    final isLearner = false; //user?.role == Role.learner;
+    final user = context.watch<AppAuthProvider>().user!;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -169,7 +163,7 @@ class _HomeTab extends StatelessWidget {
                     ),
                   );
                 },
-                'enabled': isAdmin || isInstructor,
+                'enabled': user.isAdmin || user.isInstructor,
               },
               {
                 'icon': Icons.style,
@@ -210,7 +204,7 @@ class _HomeTab extends StatelessWidget {
                             )),
                   );
                 },
-                'enabled': isAdmin,
+                'enabled': user.isAdmin,
               },
               {
                 'icon': Icons.info_outline,
@@ -220,7 +214,7 @@ class _HomeTab extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => CenterDetailsPage(centerCode: '')),
                   );
                 },
-                'enabled': isLearner || isPendingLearner,
+                'enabled': user.isLearner || user.isPendingLearner,
               },
             ],
           ),

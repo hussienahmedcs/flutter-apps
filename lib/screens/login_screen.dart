@@ -8,7 +8,8 @@ import '../providers/app_auth_provider.dart';
 /// sign up modes.  In either mode, form validation ensures the
 /// required fields are filled before submission.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  final String? initialCenterCode;
+  const LoginScreen({super.key, this.initialCenterCode});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -20,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _displayNameController = TextEditingController();
+  bool _signUpAsCenter = false;
 
   @override
   void dispose() {
@@ -136,6 +138,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Sign up as Center'),
+                    value: _signUpAsCenter,
+                    onChanged: (val) {
+                      setState(() {
+                        _signUpAsCenter = val ?? false;
+                      });
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
                 ],
                 const SizedBox(height: 24),
                 ElevatedButton(
@@ -143,24 +156,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text(isSignUp ? 'Register' : 'Sign In'),
                 ),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: auth.isLoading ? null : () async {
-                    try {
-                      await auth.signInWithGoogle();
-                    } on Exception catch (e) {
-                      print(e.toString());
-                      // ScaffoldMessenger.of(context).showSnackBar(
-                      //   SnackBar(content: Text('Error: ${e.toString()}')),
-                      // );
-                    }
-                  },
-                  icon: const Icon(Icons.login),
-                  label: const Text('Continue with Google'),
-                ),
-                if (auth.isLoading) const Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: CircularProgressIndicator(),
-                ),
+                if (!_signUpAsCenter || !isSignUp)
+                  OutlinedButton.icon(
+                    onPressed: auth.isLoading
+                        ? null
+                        : () async {
+                            try {
+                              await auth.signInWithGoogle(context, isSignUp, centerCode: widget.initialCenterCode);
+                            } on Exception catch (e) {
+                              print(e.toString());
+                              // ScaffoldMessenger.of(context).showSnackBar(
+                              //   SnackBar(content: Text('Error: ${e.toString()}')),
+                              // );
+                            }
+                          },
+                    icon: const Icon(Icons.login),
+                    label: const Text('Continue with Google'),
+                  ),
+                if (auth.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: CircularProgressIndicator(),
+                  ),
               ],
             ),
           ),
