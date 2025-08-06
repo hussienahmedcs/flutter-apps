@@ -5,6 +5,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:wordstory/data/models/center.dart';
+import 'package:wordstory/data/models/center_request.dart';
 
 class ManageCenterPage extends StatefulWidget {
   final String centerCode;
@@ -18,7 +20,7 @@ class ManageCenterPage extends StatefulWidget {
 class _ManageCenterPageState extends State<ManageCenterPage> {
   String logoUrl = '';
   String centerName = '';
-  String centerCode = '';
+  // String centerCode = '';
   XFile? _pickedImage;
   bool _loading = false;
 
@@ -34,7 +36,7 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
     setState(() {
       logoUrl = data['logoUrl'] ?? '';
       centerName = data['name'];
-      centerCode = data['code'];
+      // centerCode = data['code'];
     });
   }
 
@@ -50,13 +52,13 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
     if (_pickedImage != null) await uploadLogo();
     await FirebaseFirestore.instance.collection('centers').doc(widget.centerCode).update({
       'logoUrl': logoUrl,
-      'code': centerCode,
+      'code': widget.centerCode,
     });
     setState(() => _loading = false);
   }
 
   void shareDeepLink() {
-    final link = 'https://wordstory-fe3a3.web.app/code/$centerCode';
+    final link = 'https://wordstory-fe3a3.web.app/code/${widget.centerCode}';
     Share.share('Join our Center using this link: $link');
   }
 
@@ -68,6 +70,18 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isInvalid = widget.centerCode == null || widget.centerCode.trim().isEmpty;
+    if (isInvalid) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Center')),
+        body: const Center(
+          child: Text(
+            'Invalid Center Code',
+            style: TextStyle(fontSize: 16, color: Colors.red),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Manage Center')),
       body: Padding(
@@ -95,8 +109,8 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Center Code: $centerCode', style: const TextStyle(fontSize: 18)),
-                  IconButton(icon: const Icon(Icons.refresh), onPressed: () => setState(() => centerCode = centerCode)),
+                  Text('Center Code: ${widget.centerCode}', style: const TextStyle(fontSize: 18)),
+                  IconButton(icon: const Icon(Icons.refresh), onPressed: () => setState(() => {})),
                 ],
               ),
               ElevatedButton.icon(
@@ -115,8 +129,12 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('centers')
-                    .doc(widget.centerCode) // <-- make sure this is the correct field (id vs code)
-                    .collection('student_requests')
+                    .doc(widget.centerCode)
+                    .collection('requests')
+                    .where('centerCode', isEqualTo: widget.centerCode)
+                    .where('requesterRole', isEqualTo: Role.learner.name)
+                    .where('status', isEqualTo: RequestStatus.pending.name)
+                    .where('type', isEqualTo: RequestType.join.name)
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -130,24 +148,108 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
                   }
 
                   var requests = snapshot.data!.docs;
-                  return ExpansionTile(
-                    title: Text('Learner Join Requests (${requests.length})'),
-                    children: requests
-                        .map((req) => ListTile(
-                              title: Text(req['name'] ?? 'Unknown'),
-                              subtitle: Text(req['email'] ?? ''),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.check),
-                                onPressed: () async {
-                                  // Approve request
-                                  await FirebaseFirestore.instance.collection('centers').doc(widget.centerCode).update({
-                                    'learners': FieldValue.arrayUnion([req.id]) // Add learner UID to array
-                                  });
-                                  await req.reference.delete();
-                                },
-                              ),
-                            ))
-                        .toList(),
+                  final requesterIds = requests.map((d) => d['requesterId']).toList();
+
+                  return FutureBuilder<QuerySnapshot>(
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .where(FieldPath.documentId, whereIn: requesterIds)
+                        .get(),
+                    builder: (context, usersSnap) {
+                      if (usersSnap.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (usersSnap.hasError) {
+                        return const Text('Error loading user details');
+                      }
+
+                      final users = {for (var u in usersSnap.data!.docs) u.id: u.data() as Map<String, dynamic>};
+
+                      return ExpansionTile(
+                        title: Text('Learner Join Requests (${requests.length})'),
+                        children: requests.map((req) {
+                          final user = users[req['requesterId']];
+                          final userName = user?['name'] ?? 'Unknown';
+                          final userEmail = user?['email'] ?? '';
+
+                          return ListTile(
+                            title: Text(userName),
+                            subtitle: Text(userEmail),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.check),
+                              onPressed: () async {
+                                // Approve request: Add learner to center + remove request
+                                await FirebaseFirestore.instance.collection('centers').doc(widget.centerCode).update({
+                                  'learners': FieldValue.arrayUnion([req['requesterId']])
+                                });
+                                // await req.reference.delete();
+                                await FirebaseFirestore.instance
+                                    .collection('centers')
+                                    .doc(widget.centerCode)
+                                    .collection('requests')
+                                    .doc(req.id)
+                                    .update({'status': RequestStatus.approved.name});
+                                setState(() {});
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance.collection('centers').doc(widget.centerCode).snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return const Text('Error loading learners');
+                  }
+                  if (!snapshot.hasData || !(snapshot.data!.data() as Map<String, dynamic>).containsKey('learners')) {
+                    return const Text('No learners');
+                  }
+
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  final List<dynamic> learnerIds = data['learners'] ?? [];
+
+                  if (learnerIds.isEmpty) {
+                    return const Text('No learners');
+                  }
+
+                  return FutureBuilder<QuerySnapshot>(
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .where(FieldPath.documentId, whereIn: learnerIds)
+                        .get(),
+                    builder: (context, usersSnap) {
+                      if (usersSnap.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (usersSnap.hasError) {
+                        return const Text('Error loading user details');
+                      }
+
+                      final users = {for (var u in usersSnap.data!.docs) u.id: u.data() as Map<String, dynamic>};
+
+                      return ExpansionTile(
+                        title: Text('Learners (${learnerIds.length})'),
+                        children: learnerIds.map((id) {
+                          final user = users[id];
+                          final userName = user?['name'] ?? 'Unknown';
+                          final userEmail = user?['email'] ?? '';
+
+                          return ListTile(
+                            title: Text(userName),
+                            subtitle: Text(userEmail),
+                            trailing: const Icon(Icons.person),
+                          );
+                        }).toList(),
+                      );
+                    },
                   );
                 },
               )

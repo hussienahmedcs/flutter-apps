@@ -7,6 +7,7 @@ class UserInterface {
   final String? displayName;
   final String? email;
   final String? photoURL;
+  final String? centerCode;
   final bool isAdmin;
   final bool isInstructor;
   final bool isLearner;
@@ -21,6 +22,7 @@ class UserInterface {
     this.displayName,
     this.email,
     this.photoURL,
+    this.centerCode,
     required Role role,
     required this.deleteAccount,
     required this.signOut,

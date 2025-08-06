@@ -69,12 +69,17 @@ class CenterRepository {
 
   static Future<void> sendJoinRequest(CenterRequest joinRequest) async {
     try {
-      await _firestore
-          .collection('centers')
-          .doc(joinRequest.centerCode)
-          .collection('requests')
-          .doc(joinRequest.id)
-          .set(joinRequest.toMap());
+      final collectionRef = _firestore.collection('centers').doc(joinRequest.centerCode).collection('requests');
+
+      // Check if ID is null or invalid (-1)
+      final isNew = joinRequest.id == null || joinRequest.id == -1 || joinRequest.id == '-1';
+
+      final docId = isNew ? collectionRef.doc().id : joinRequest.id.toString();
+
+      // If we created a new ID, also update the joinRequest object
+      final updatedRequest = joinRequest.copyWith(id: docId);
+
+      await collectionRef.doc(docId).set(updatedRequest.toMap());
     } catch (e) {
       throw Exception('Failed to send join request: $e');
     }

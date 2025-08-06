@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+// import 'package:wordstory/util/util_dialog.dart';
 import '../providers/app_auth_provider.dart';
 
 /// Login/registration page.  Users can either sign in with their
@@ -38,14 +39,17 @@ class _LoginScreenState extends State<LoginScreen> {
     final displayName = _displayNameController.text.trim();
     try {
       if (isSignUp) {
-        await auth.signUpWithEmail(email, password, displayName);
+        await auth.signUpWithEmail(context, email, password, displayName);
       } else {
-        await auth.signInWithEmail(email, password);
+        await auth.signInWithEmail(context, email, password);
       }
     } on Exception catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      if (context.mounted) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -62,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'WordStory',
+                  widget.initialCenterCode == null ? 'WordStory' : 'Word Story',
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.bold,

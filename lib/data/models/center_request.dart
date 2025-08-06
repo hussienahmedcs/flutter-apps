@@ -69,4 +69,29 @@ class CenterRequest {
       'requesterRole': requesterRole.name,
     };
   }
+
+  /// CopyWith method
+  CenterRequest copyWith({
+    String? id,
+    String? requesterId,
+    RequestType? type,
+    String? reason,
+    String? centerCode,
+    String? createdAt,
+    String? updatedAt,
+    RequestStatus? status,
+    Role? requesterRole,
+  }) {
+    return CenterRequest(
+      id: id ?? this.id,
+      requesterId: requesterId ?? this.requesterId,
+      type: type ?? this.type,
+      reason: reason ?? this.reason,
+      centerCode: centerCode ?? this.centerCode,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      status: status ?? this.status,
+      requesterRole: requesterRole ?? this.requesterRole,
+    );
+  }
 }

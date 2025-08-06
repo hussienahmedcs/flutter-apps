@@ -5,6 +5,7 @@ import 'package:wordstory/providers/app_auth_provider.dart';
 import 'package:wordstory/screens/center_details_page.dart';
 import 'package:wordstory/screens/exam/exam_page.dart';
 import 'package:wordstory/screens/manage_center_page.dart';
+import 'package:wordstory/util/util_dialog.dart';
 import '../providers/gamification_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/story_provider.dart';
@@ -200,7 +201,7 @@ class _HomeTab extends StatelessWidget {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                         builder: (_) => ManageCenterPage(
-                              centerCode: '',
+                              centerCode: user.centerCode ?? '',
                             )),
                   );
                 },
@@ -211,7 +212,11 @@ class _HomeTab extends StatelessWidget {
                 'label': 'Center Details',
                 'onTap': () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => CenterDetailsPage(centerCode: '')),
+                    MaterialPageRoute(
+                        builder: (_) => CenterDetailsPage(
+                              centerCode: user.centerCode ?? '',
+                              userId: user.uid,
+                            )),
                   );
                 },
                 'enabled': user.isLearner || user.isPendingLearner,

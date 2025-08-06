@@ -16,7 +16,7 @@ class CenterDetails {
   final String? description;
   // final List<String> admins;
   // final List<Instructor> instructors;
-  // final List<String> learners;
+  final List<String> learners;
   // final List<StudentRequest> studentRequests;
   final String? plan;
   final String createdAt;
@@ -38,7 +38,7 @@ class CenterDetails {
     this.description,
     // this.admins = const [],
     // this.instructors = const [],
-    // this.learners = const [],
+    this.learners = const [],
     // this.studentRequests = const [],
     this.plan,
     String? createdAt,
@@ -65,7 +65,7 @@ class CenterDetails {
       //         ?.map((e) => Instructor.fromMap((e as Map<String, dynamic>)['id'], Map<String, dynamic>.from(e)))
       //         .toList() ??
       //     [],
-      // learners: (map['learners'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      learners: (map['learners'] as List?)?.map((e) => e.toString()).toList() ?? [],
       // studentRequests: (map['studentRequests'] as List?)
       //         ?.map((e) => StudentRequest.fromMap(Map<String, dynamic>.from(e)))
       //         .toList() ??
@@ -92,7 +92,7 @@ class CenterDetails {
       'admin': admin,
       // 'admins': admins,
       // 'instructors': instructors,
-      // 'learners': learners,
+      'learners': learners,
       // 'studentRequests': studentRequests.map((e) => e.toMap()).toList(),
       'plan': plan,
       'createdAt': createdAt,

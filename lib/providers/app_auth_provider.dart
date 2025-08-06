@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:wordstory/data/interfaces/user_interface.dart';
 import 'package:wordstory/data/repositories/auth_repository.dart';
+import 'package:wordstory/util/util_dialog.dart';
 // import '../services/auth_service.dart';
 
 /// Provides authentication state and exposes actions for signing
@@ -46,11 +47,13 @@ class AppAuthProvider with ChangeNotifier {
       print('>>>>>>>>>>>>Load User Var');
       final localUser = await _authRepository.getUserDetails();
       final fbUser = _authRepository.currentUser;
+      final centerInfo = await AuthRepository.getCenterLocally();
       _user = UserInterface(
         fbUser!.uid,
         displayName: fbUser.displayName,
         email: fbUser.email,
         photoURL: fbUser.photoURL,
+        centerCode: centerInfo?.center.code,
         role: localUser!.role,
         deleteAccount: () async {
           await fbUser.delete();
@@ -104,26 +107,28 @@ class AppAuthProvider with ChangeNotifier {
   bool get isLoggedIn => _user != null;
 
   /// Sign the user in using an email and password.
-  Future<void> signInWithEmail(String email, String password) async {
-    _loading = true;
-    notifyListeners();
+  Future<void> signInWithEmail(BuildContext context, String email, String password) async {
+    // _loading = true;
+    // notifyListeners();
+    DialogUtils.showLoader(context, message: 'Signing In');
     try {
       await _authRepository.signInWithEmail(email, password);
     } finally {
-      _loading = false;
+      // _loading = false;
+      DialogUtils.hideLoader(context);
       notifyListeners();
     }
   }
 
   /// Register a new user with an email and password and display name.
-  Future<void> signUpWithEmail(String email, String password, String displayName) async {
-    _loading = true;
-    notifyListeners();
+  Future<void> signUpWithEmail(BuildContext context, String email, String password, String displayName) async {
+    // _loading = true;
+    // notifyListeners();
     try {
       await _authRepository.signUpWithEmail(this, email, password, displayName);
     } finally {
-      _loading = false;
-      notifyListeners();
+      // _loading = false;
+      // notifyListeners();
     }
   }
 
@@ -133,8 +138,8 @@ class AppAuthProvider with ChangeNotifier {
     // _loading = true;
     // notifyListeners();
     try {
+      DialogUtils.showLoader(context, message: isSignUp ? 'Sining Up' : 'Signing In');
       final result = await _authRepository.signInWithGoogle(this, isSignUp: isSignUp, centerCode: centerCode);
-
       if (result.success) {
         // ✅ Success
         if (context.mounted) {
@@ -160,6 +165,7 @@ class AppAuthProvider with ChangeNotifier {
     } finally {
       // _loading = false;
       // notifyListeners();
+      DialogUtils.hideLoader(context);
     }
   }
 

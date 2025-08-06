@@ -42,7 +42,7 @@ class _WordStoryAppState extends State<WordStoryApp> {
     if (initialLink != null) {
       return _parseCenterCode(initialLink);
     }
-    return null; // No code in link, use default
+    return 'itnovax'; // No code in link, use default
   }
 
   String? _parseCenterCode(Uri uri) {
@@ -81,7 +81,7 @@ class _WordStoryAppState extends State<WordStoryApp> {
           child: Consumer<ThemeProvider>(
             builder: (context, theme, _) {
               return MaterialApp(
-                title: 'WordStory',
+                title: centerCode == null ? 'WordStory' : 'Word Story',
                 theme: WordStoryTheme.lightTheme,
                 darkTheme: WordStoryTheme.darkTheme,
                 themeMode: theme.themeMode,
