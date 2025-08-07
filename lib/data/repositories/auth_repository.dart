@@ -20,7 +20,7 @@ class AuthRepository {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  // Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
   Future<bool> get isLoggedIn => _googleSignIn.isSignedIn();
   User? get currentUser => _auth.currentUser;
 
@@ -51,7 +51,8 @@ class AuthRepository {
         role = role ?? Role.user;
       }
 
-      final AppUser user = AppUser(id: cred.user!.uid, name: displayName, email: email, role: role);
+      final AppUser user =
+          AppUser(id: cred.user!.uid, name: displayName, email: email, role: role, centerCode: centerCode);
       await saveUserDetails(user, 'both');
       final cwr = await CenterRepository.fetchUserCenterWithRole(cred.user!.uid);
       await saveCenterLocally(cwr);
@@ -116,10 +117,12 @@ class AuthRepository {
         }
         //User/learner signup
         final AppUser user = AppUser(
-            id: userCred?.user!.uid ?? '',
-            name: userCred?.user!.displayName ?? '',
-            email: userCred?.user!.email ?? '',
-            role: role ?? Role.user);
+          id: userCred?.user!.uid ?? '',
+          name: userCred?.user!.displayName ?? '',
+          email: userCred?.user!.email ?? '',
+          role: role ?? Role.user,
+          centerCode: centerCode,
+        );
         await saveUserDetails(user, 'online');
       }
 
@@ -283,5 +286,10 @@ class AuthRepository {
       await _googleSignIn.signOut();
     }
     await _auth.signOut();
+  }
+
+  Future<bool> isUserExist(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    return doc.exists;
   }
 }

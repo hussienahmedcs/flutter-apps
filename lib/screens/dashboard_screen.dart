@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/interfaces/user_interface.dart';
+import 'package:wordstory/data/models/center_config.dart';
 import 'package:wordstory/data/models/session_model.dart';
+import 'package:wordstory/data/repositories/center_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
+import 'package:wordstory/screens/admin/manage_center_page.dart';
 import 'package:wordstory/screens/center_details_page.dart';
 import 'package:wordstory/screens/exam/exam_page.dart';
-import 'package:wordstory/screens/manage_center_page.dart';
-import 'package:wordstory/util/util_dialog.dart';
 import '../providers/gamification_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/story_provider.dart';
@@ -39,16 +41,75 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _index = 0;
   DateTime? _lastBackPress;
+  CenterConfig? _config;
+  bool _loading = false;
+  final CenterRepository _centerRepository = CenterRepository();
+  UserInterface? _user;
+  bool isPendingInstructor = false;
 
   void switchTab(int index) {
     setState(() => _index = index);
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCenterConfig());
+  }
+
+  Future<void> _loadCenterConfig() async {
+    final user = context.read<AppAuthProvider>().user;
+    if (user == null) return;
+
+    setState(() {
+      _user = user;
+      _loading = true;
+    });
+    print('vvvvvvvvvvvvvvvvvv${user.centerCode}');
+    //check if pending instructor
+    if (user.isInstructor == true && user.centerCode == null) {
+      final pending = await _centerRepository.isInstructorPending(user.uid);
+      if (mounted) {
+        setState(() {
+          isPendingInstructor = pending;
+          _config = null;
+          _loading = false;
+        });
+      }
+      return;
+    }
+
+    final config = await _centerRepository.getCenterConfig(user.centerCode ?? '');
+    if (mounted) {
+      setState(() {
+        _config = config;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final GlobalKey<FlashcardsScreenState> flashcardKey = GlobalKey<FlashcardsScreenState>();
+
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_user == null) {
+      return const Scaffold(
+        body: Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Center(child: Text("System error, user details not retrieved, please contact admin")),
+        ),
+      );
+    }
+    if (_user!.isUser == false && _config == null && (!isPendingInstructor && _user!.isInstructor)) {
+      return const Scaffold(body: Center(child: Text("No Center Config, please contact center admin")));
+    }
+
     final List<Map<String, dynamic>> pages = [
-      {"screen": const _HomeTab(), "key": null},
+      {"screen": _HomeTab(config: _config), "key": null},
       {"screen": const SessionsListScreen(), "key": null},
       {"screen": FlashcardsScreen(key: flashcardKey), "key": flashcardKey},
       {"screen": const MyStoriesScreen(), "key": null},
@@ -58,14 +119,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return WillPopScope(
       onWillPop: () async {
         if (_index != 0) {
-          // Go back to Home tab instead of exiting
-          setState(() {
-            _index = 0;
-          });
+          setState(() => _index = 0);
           return false;
         }
 
-        // Double back to exit
         final now = DateTime.now();
         if (_lastBackPress == null || now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
           _lastBackPress = now;
@@ -74,7 +131,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
           return false;
         }
-        return true; // Exit app
+        return true;
       },
       child: Scaffold(
         body: IndexedStack(
@@ -85,35 +142,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
           type: BottomNavigationBarType.fixed,
           currentIndex: _index,
           onTap: (value) {
-            setState(() {
-              _index = value;
-            });
+            setState(() => _index = value);
             final key = pages[value]['key'];
             if (key != null && key.currentState != null) {
               key.currentState!.reset();
             }
           },
           items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.event_note),
-              label: 'Sessions',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.style),
-              label: 'Practice',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.library_books),
-              label: 'Stories',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: 'Profile',
-            ),
+            BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.event_note), label: 'Sessions'),
+            BottomNavigationBarItem(icon: Icon(Icons.style), label: 'Practice'),
+            BottomNavigationBarItem(icon: Icon(Icons.library_books), label: 'Stories'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
       ),
@@ -127,7 +167,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 /// recent feed navigates to their detail pages using a
 /// `Navigator.push` call on the root context.
 class _HomeTab extends StatelessWidget {
-  const _HomeTab();
+  final CenterConfig? config;
+  const _HomeTab({this.config});
   @override
   Widget build(BuildContext context) {
     print('>>>>>>>>>>>>>>>>>>>>>');
@@ -164,7 +205,10 @@ class _HomeTab extends StatelessWidget {
                     ),
                   );
                 },
-                'enabled': user.isAdmin || user.isInstructor,
+                'enabled': user.isUser ||
+                    user.isAdmin ||
+                    (config != null && config!.learnerCanCreateSession && user.isLearner) ||
+                    (config != null && config!.teacherCanCreateSession && user.isInstructor),
               },
               {
                 'icon': Icons.style,
@@ -172,7 +216,7 @@ class _HomeTab extends StatelessWidget {
                 'onTap': () {
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FlashcardsScreen()));
                 },
-                'enabled': true,
+                'enabled': user.isUser || user.isAdmin || user.isLearner || user.isPendingLearner || user.isInstructor,
               },
               {
                 'icon': Icons.create,
@@ -182,7 +226,11 @@ class _HomeTab extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => const StoryBuilderScreen()),
                   );
                 },
-                'enabled': true,
+                'enabled': user.isUser ||
+                    user.isAdmin ||
+                    user.isPendingLearner ||
+                    user.isInstructor ||
+                    (config != null && config!.allowLearnerStoryBuilder && user.isLearner),
               },
               {
                 'icon': Icons.quiz,
@@ -192,7 +240,10 @@ class _HomeTab extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => const ExamPage()),
                   );
                 },
-                'enabled': true,
+                'enabled': user.isUser ||
+                    user.isAdmin ||
+                    user.isInstructor ||
+                    (config != null && config!.learnerCanAccessExamPage && user.isLearner),
               },
               {
                 'icon': Icons.settings,

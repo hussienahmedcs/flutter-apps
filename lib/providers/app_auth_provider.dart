@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+// import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/framework.dart';
+// import 'package:flutter/src/widgets/framework.dart';
 import 'package:wordstory/data/interfaces/user_interface.dart';
 import 'package:wordstory/data/models/center.dart';
 import 'package:wordstory/data/repositories/auth_repository.dart';
@@ -23,19 +23,32 @@ class AppAuthProvider with ChangeNotifier {
     //1- check if user already signed in and has locale data as well
     // final bool isUserLoaded = isLoggedIn;
     // final bool isUserSignedIn = _authRepository;
-
-    // _authSub = _authRepository.authStateChanges.listen((user) {
-    // _user = user;
-    // _user = user != null
-    //     ? UserInterface(user.uid, displayName: user.displayName, email: user.email, photoURL: user.photoURL,
-    //         deleteAccount: () async {
-    //         await user.delete();
-    //       })
-    //     : null;
-    // _loading = false;
-    // notifyListeners();
-    // });
+    _authSub = _authRepository.authStateChanges.listen((user) {
+      print(user);
+      print('////////////////////////////////////////////////////////////////////');
+      // _user = user;
+      // _user = user != null
+      //     ? UserInterface(user.uid, displayName: user.displayName, email: user.email, photoURL: user.photoURL,
+      //         deleteAccount: () async {
+      //         await user.delete();
+      //       })
+      //     : null;
+      // _loading = false;
+      // notifyListeners();
+      checkUserExist();
+    });
     loader();
+  }
+  void checkUserExist() async {
+    print('TTTTTTTTTTTT $isLoggedIn $_user');
+    if (isLoggedIn && _user != null) {
+      final exists = await _authRepository.isUserExist(_user!.uid);
+      if (!exists) {
+        await _authRepository.signOut();
+        _user = null;
+        notifyListeners();
+      }
+    }
   }
 
   void loader() async {

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wordstory/data/models/center.dart';
+import 'package:wordstory/data/models/center_config.dart';
 import 'package:wordstory/data/models/center_request.dart';
 import 'package:wordstory/data/models/center_with_role.dart';
 
@@ -83,5 +84,28 @@ class CenterRepository {
     } catch (e) {
       throw Exception('Failed to send join request: $e');
     }
+  }
+
+  Future<CenterConfig?> getCenterConfig(String centerCode) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('centers').doc(centerCode).get();
+      final raw = doc.data()?['config'];
+      final data = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+      return CenterConfig.fromMap(data);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> isInstructorPending(String uid) async {
+    final query = await _firestore
+        .collectionGroup('requests') // in case requests are nested in center documents
+        .where('requesterRole', isEqualTo: Role.instructor.name)
+        .where('requesterId', isEqualTo: uid)
+        .where('status', isEqualTo: RequestStatus.pending.name)
+        .where('type', isEqualTo: RequestType.join.name)
+        .limit(1)
+        .get();
+    return query.docs.isNotEmpty;
   }
 }

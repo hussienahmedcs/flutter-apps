@@ -12,6 +12,7 @@ class AppUser {
   final String? createdAt;
   final String? updatedAt;
   final bool isActive;
+  final String? centerCode;
   final CenterWithRole? centerWithRole;
 
   // From Class 1
@@ -27,6 +28,7 @@ class AppUser {
     this.createdAt,
     this.updatedAt,
     this.isActive = true,
+    this.centerCode,
     this.centerWithRole,
     this.themeMode = ThemeMode.system,
     this.syncEnabled = true,
@@ -61,6 +63,7 @@ class AppUser {
           ? (map['updatedAt'] as Timestamp).toDate().toIso8601String()
           : map['updatedAt'],
       isActive: map['isActive'] ?? true,
+      centerCode: map['centerCode'],
       centerWithRole: (map['centerWithRole'] != null && map['centerWithRole'] is Map)
           ? CenterWithRole.fromMap(map['centerWithRole'])
           : null,
@@ -93,6 +96,7 @@ class AppUser {
       'createdAt': createdAt ?? DateTime.now().toIso8601String(),
       'updatedAt': updatedAt ?? DateTime.now().toIso8601String(),
       'isActive': isActive,
+      'centerCode': centerCode,
       'centerWithRole': centerWithRole?.toMap(),
       'settings': {
         'theme': mode,
@@ -111,6 +115,7 @@ class AppUser {
     String? createdAt,
     String? updatedAt,
     bool? isActive,
+    String? centerCode,
     CenterWithRole? centerWithRole,
     ThemeMode? themeMode,
     bool? syncEnabled,
@@ -124,6 +129,7 @@ class AppUser {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isActive: isActive ?? this.isActive,
+      centerCode: centerCode ?? this.centerCode,
       centerWithRole: centerWithRole ?? this.centerWithRole,
       themeMode: themeMode ?? this.themeMode,
       syncEnabled: syncEnabled ?? this.syncEnabled,

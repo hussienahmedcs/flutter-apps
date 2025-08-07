@@ -38,6 +38,7 @@ class _WordStoryAppState extends State<WordStoryApp> {
   late final AppLinks _appLinks;
 
   Future<Map<String, String?>?> _loadJoinParams() async {
+    // return {'center': 'itnovax', 'type': '102'};
     _appLinks = AppLinks();
     final Uri? initialLink = await _appLinks.getInitialLink();
     if (initialLink != null) {

@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:wordstory/data/models/center.dart';
 import 'package:wordstory/data/models/center_request.dart';
+import 'package:wordstory/screens/admin/center_config_admin_page.dart';
 
 class ManageCenterPage extends StatefulWidget {
   final String centerCode;
@@ -177,6 +178,19 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
                       onPressed: saveCenterConfig,
                       child: const Text('Save Configuration'),
                     ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.settings),
+                label: const Text('Center Settings'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CenterConfigAdminPage(centerCode: widget.centerCode),
+                    ),
+                  );
+                },
+              ),
               const SizedBox(height: 24),
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
