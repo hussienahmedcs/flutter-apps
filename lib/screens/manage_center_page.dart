@@ -242,23 +242,27 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
-                    return const Text('Error loading learners');
+                    return const Text('Error loading members');
                   }
-                  if (!snapshot.hasData || !(snapshot.data!.data() as Map<String, dynamic>).containsKey('learners')) {
-                    return const Text('No learners');
+
+                  if (!snapshot.hasData || snapshot.data!.data() == null) {
+                    return const Text('No data found');
                   }
 
                   final data = snapshot.data!.data() as Map<String, dynamic>;
                   final List<dynamic> learnerIds = data['learners'] ?? [];
+                  final List<dynamic> teacherIds = data['teachers'] ?? [];
 
-                  if (learnerIds.isEmpty) {
-                    return const Text('No learners');
+                  final allUserIds = [...learnerIds, ...teacherIds].toSet().toList();
+
+                  if (allUserIds.isEmpty) {
+                    return const Text('No members');
                   }
 
                   return FutureBuilder<QuerySnapshot>(
                     future: FirebaseFirestore.instance
                         .collection('users')
-                        .where(FieldPath.documentId, whereIn: learnerIds)
+                        .where(FieldPath.documentId, whereIn: allUserIds)
                         .get(),
                     builder: (context, usersSnap) {
                       if (usersSnap.connectionState == ConnectionState.waiting) {
@@ -270,24 +274,40 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
 
                       final users = {for (var u in usersSnap.data!.docs) u.id: u.data() as Map<String, dynamic>};
 
-                      return ExpansionTile(
-                        title: Text('Learners (${learnerIds.length})'),
-                        children: learnerIds.map((id) {
-                          final user = users[id];
-                          final userName = user?['name'] ?? 'Unknown';
-                          final userEmail = user?['email'] ?? '';
-
-                          return ListTile(
-                            title: Text(userName),
-                            subtitle: Text(userEmail),
-                            trailing: const Icon(Icons.person),
-                          );
-                        }).toList(),
+                      return Column(
+                        children: [
+                          ExpansionTile(
+                            title: Text('Learners (${learnerIds.length})'),
+                            children: learnerIds.map((id) {
+                              final user = users[id];
+                              final userName = user?['name'] ?? 'Unknown';
+                              final userEmail = user?['email'] ?? '';
+                              return ListTile(
+                                title: Text(userName),
+                                subtitle: Text(userEmail),
+                                leading: const Icon(Icons.school),
+                              );
+                            }).toList(),
+                          ),
+                          ExpansionTile(
+                            title: Text('Instructors (${teacherIds.length})'),
+                            children: teacherIds.map((id) {
+                              final user = users[id];
+                              final userName = user?['name'] ?? 'Unknown';
+                              final userEmail = user?['email'] ?? '';
+                              return ListTile(
+                                title: Text(userName),
+                                subtitle: Text(userEmail),
+                                leading: const Icon(Icons.person_outline),
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       );
                     },
                   );
                 },
-              )
+              ),
             ],
           ),
         ),
