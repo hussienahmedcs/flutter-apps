@@ -2,13 +2,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:wordstory/data/models/center.dart';
 import 'package:wordstory/data/models/center_request.dart';
-// import 'package:wordstory/services/auth_service.dart';
 
 class CenterDetailsPage extends StatefulWidget {
   final String centerCode;
   final String? userId;
+  final Role userRole;
 
-  const CenterDetailsPage({super.key, required this.centerCode, this.userId});
+  const CenterDetailsPage({
+    super.key,
+    required this.centerCode,
+    this.userId,
+    this.userRole = Role.learner, // default to learner
+  });
 
   @override
   _CenterDetailsPageState createState() => _CenterDetailsPageState();
@@ -37,6 +42,7 @@ class _CenterDetailsPageState extends State<CenterDetailsPage> {
       setState(() {
         _loading = true;
       });
+
       final centerRef = FirebaseFirestore.instance.collection('centers').doc(centerCode);
       final centerSnap = await centerRef.get();
       if (!centerSnap.exists) {
@@ -46,19 +52,25 @@ class _CenterDetailsPageState extends State<CenterDetailsPage> {
         });
         return;
       }
+
       final center = centerSnap.data() as Map<String, dynamic>;
       final learners = List<String>.from(center['learners'] ?? []);
+      final teachers = List<String>.from(center['teachers'] ?? []);
 
-      // Check join status
-      bool joined = learners.contains(widget.userId);
+      // Check if joined
+      final joined =
+          widget.userRole == Role.learner ? learners.contains(widget.userId) : teachers.contains(widget.userId);
+
+      // Check pending request
       bool pending = false;
       if (!joined) {
         final reqSnap = await centerRef
             .collection('requests')
             .where('centerCode', isEqualTo: widget.centerCode)
-            .where('requesterRole', isEqualTo: Role.learner.name)
+            .where('requesterRole', isEqualTo: widget.userRole.name)
             .where('status', isEqualTo: RequestStatus.pending.name)
             .where('type', isEqualTo: RequestType.join.name)
+            .where('requesterId', isEqualTo: widget.userId)
             .get();
         pending = reqSnap.docs.isNotEmpty;
       }
@@ -79,33 +91,38 @@ class _CenterDetailsPageState extends State<CenterDetailsPage> {
     }
   }
 
-  // Future<void> _sendJoinRequest() async {
-  //   try {
-  //     final reqRef = FirebaseFirestore.instance
-  //         .collection('centers')
-  //         .doc(widget.centerCode)
-  //         .collection('student_requests')
-  //         .doc(widget.userId);
+  Future<void> _sendJoinRequest() async {
+    try {
+      final reqRef = FirebaseFirestore.instance
+          .collection('centers')
+          .doc(widget.centerCode)
+          .collection('requests')
+          .doc(widget.userId);
 
-  //     await reqRef.set({
-  //       'id': widget.userId,
-  //       'createdAt': FieldValue.serverTimestamp(),
-  //       'status': 'pending',
-  //     });
+      final request = CenterRequest(
+        id: reqRef.id,
+        requesterId: widget.userId!,
+        centerCode: widget.centerCode,
+        requesterRole: widget.userRole,
+        type: RequestType.join,
+        status: RequestStatus.pending,
+      );
 
-  //     setState(() {
-  //       _isPending = true;
-  //     });
+      await reqRef.set(request.toMap());
 
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Join request sent!')),
-  //     );
-  //   } catch (e) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Error sending request: $e')),
-  //     );
-  //   }
-  // }
+      setState(() {
+        _isPending = true;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Join request sent!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sending request: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +133,7 @@ class _CenterDetailsPageState extends State<CenterDetailsPage> {
       );
     }
 
-    final isInvalid = widget.centerCode == null || widget.centerCode.trim().isEmpty || _centerData == null;
+    final isInvalid = widget.centerCode.trim().isEmpty || _centerData == null;
     if (isInvalid) {
       return Scaffold(
         appBar: AppBar(title: const Text('Center')),
@@ -146,6 +163,11 @@ class _CenterDetailsPageState extends State<CenterDetailsPage> {
               _centerData!['name'] ?? 'Unnamed Center',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
+            const SizedBox(height: 4),
+            Text(
+              'Joining as: ${widget.userRole.name.toUpperCase()}',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey),
+            ),
             const SizedBox(height: 8),
             if (_centerData!['description'] != null)
               Text(
@@ -168,7 +190,7 @@ class _CenterDetailsPageState extends State<CenterDetailsPage> {
               ElevatedButton.icon(
                 icon: const Icon(Icons.group_add),
                 label: const Text('Join Center'),
-                onPressed: null,
+                onPressed: _sendJoinRequest,
               ),
             const SizedBox(height: 20),
             if (_centerData!['email'] != null)

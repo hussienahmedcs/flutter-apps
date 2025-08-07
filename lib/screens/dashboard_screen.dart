@@ -216,6 +216,7 @@ class _HomeTab extends StatelessWidget {
                         builder: (_) => CenterDetailsPage(
                               centerCode: user.centerCode ?? '',
                               userId: user.uid,
+                              userRole: user.role,
                             )),
                   );
                 },

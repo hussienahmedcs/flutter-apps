@@ -8,6 +8,7 @@ class UserInterface {
   final String? email;
   final String? photoURL;
   final String? centerCode;
+  final Role role;
   final bool isAdmin;
   final bool isInstructor;
   final bool isLearner;
@@ -23,7 +24,7 @@ class UserInterface {
     this.email,
     this.photoURL,
     this.centerCode,
-    required Role role,
+    this.role = Role.user,
     required this.deleteAccount,
     required this.signOut,
     required this.updateProfile,
