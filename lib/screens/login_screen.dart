@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/models/center.dart';
 // import 'package:wordstory/util/util_dialog.dart';
 import '../providers/app_auth_provider.dart';
 
@@ -10,7 +11,8 @@ import '../providers/app_auth_provider.dart';
 /// required fields are filled before submission.
 class LoginScreen extends StatefulWidget {
   final String? initialCenterCode;
-  const LoginScreen({super.key, this.initialCenterCode});
+  final Role? role;
+  const LoginScreen({super.key, this.initialCenterCode, this.role});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -39,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final displayName = _displayNameController.text.trim();
     try {
       if (isSignUp) {
-        await auth.signUpWithEmail(context, email, password, displayName);
+        await auth.signUpWithEmail(context, email, password, displayName, role: widget.role);
       } else {
         await auth.signInWithEmail(context, email, password);
       }
@@ -166,7 +168,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? null
                         : () async {
                             try {
-                              await auth.signInWithGoogle(context, isSignUp, centerCode: widget.initialCenterCode);
+                              await auth.signInWithGoogle(context, isSignUp,
+                                  centerCode: widget.initialCenterCode, role: widget.role);
                             } on Exception catch (e) {
                               print(e.toString());
                               // ScaffoldMessenger.of(context).showSnackBar(

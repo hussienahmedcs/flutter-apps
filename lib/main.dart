@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/models/center.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 
 import 'providers/theme_provider.dart';
@@ -36,31 +37,38 @@ class WordStoryApp extends StatefulWidget {
 class _WordStoryAppState extends State<WordStoryApp> {
   late final AppLinks _appLinks;
 
-  Future<String?> _loadCenterCode() async {
+  Future<Map<String, String?>?> _loadJoinParams() async {
     _appLinks = AppLinks();
     final Uri? initialLink = await _appLinks.getInitialLink();
     if (initialLink != null) {
-      return _parseCenterCode(initialLink);
+      return _parseJoinParams(initialLink);
     }
-    return 'itnovax'; // No code in link, use default
+    return null; // default center
   }
 
-  String? _parseCenterCode(Uri uri) {
+  Map<String, String?>? _parseJoinParams(Uri uri) {
+    String? center;
+    String? type;
+
     if (uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'code') {
-      return uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
+      center = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
     }
     if (uri.queryParameters.containsKey('center')) {
-      return uri.queryParameters['center'];
+      center = uri.queryParameters['center'];
     }
-    return null;
+    if (uri.queryParameters.containsKey('type')) {
+      type = uri.queryParameters['type'];
+    }
+
+    return center != null && type != null ? {'center': center, 'type': type} : null;
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String?>(
-      future: _loadCenterCode(),
+    return FutureBuilder<Map<String, String?>?>(
+      future: _loadJoinParams(),
       builder: (context, snapshot) {
-        final centerCode = snapshot.data;
+        final centerDetails = snapshot.data;
         return MultiProvider(
           providers: [
             ChangeNotifierProvider(create: (_) => AppAuthProvider()),
@@ -80,8 +88,10 @@ class _WordStoryAppState extends State<WordStoryApp> {
           ],
           child: Consumer<ThemeProvider>(
             builder: (context, theme, _) {
+              print('HUSSEIN......................................................');
+              print(centerDetails);
               return MaterialApp(
-                title: centerCode == null ? 'WordStory' : 'Word Story',
+                title: centerDetails == null ? 'WordStory' : 'Word Story',
                 theme: WordStoryTheme.lightTheme,
                 darkTheme: WordStoryTheme.darkTheme,
                 themeMode: theme.themeMode,
@@ -100,7 +110,10 @@ class _WordStoryAppState extends State<WordStoryApp> {
                         auth.isLoggedIn
                             ? const DashboardScreen()
                             : LoginScreen(
-                                initialCenterCode: centerCode,
+                                initialCenterCode: centerDetails?['center'].toString(),
+                                role: centerDetails?['type'].toString() == '101'
+                                    ? Role.learner
+                                    : (centerDetails?['type'].toString() == '102' ? Role.instructor : Role.user),
                               );
                   },
                 ),

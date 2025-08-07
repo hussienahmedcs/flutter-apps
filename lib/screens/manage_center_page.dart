@@ -57,15 +57,67 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
     setState(() => _loading = false);
   }
 
-  void shareDeepLink() {
-    final link = 'https://wordstory-fe3a3.web.app/code/${widget.centerCode}';
-    Share.share('Join our Center using this link: $link');
+  void shareDeepLink() async {
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Select Role'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, '101'),
+            child: const Text('👩‍🎓 Learner'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, '102'),
+            child: const Text('👨‍🏫 Teacher'),
+          ),
+        ],
+      ),
+    );
+
+    if (selected != null) {
+      final link = 'https://wordstory-fe3a3.web.app/join?center=${widget.centerCode}&type=$selected';
+      Share.share('Join our Center using this link: $link');
+    }
   }
 
   void pickImage() async {
     final picker = ImagePicker();
     _pickedImage = await picker.pickImage(source: ImageSource.gallery);
     setState(() {});
+  }
+
+  Widget _buildRequestTile(
+      String title, List<QueryDocumentSnapshot> requests, Map<String, Map<String, dynamic>> users, Role role) {
+    return ExpansionTile(
+      title: Text('$title (${requests.length})'),
+      children: requests.map((req) {
+        final user = users[req['requesterId']];
+        final userName = user?['name'] ?? 'Unknown';
+        final userEmail = user?['email'] ?? '';
+
+        return ListTile(
+          title: Text(userName),
+          subtitle: Text(userEmail),
+          trailing: IconButton(
+            icon: const Icon(Icons.check),
+            onPressed: () async {
+              final docRef = FirebaseFirestore.instance.collection('centers').doc(widget.centerCode);
+
+              final roleField = role == Role.learner ? 'learners' : 'teachers';
+
+              await docRef.update({
+                roleField: FieldValue.arrayUnion([req['requesterId']])
+              });
+
+              await docRef.collection('requests').doc(req.id).update({'status': RequestStatus.approved.name});
+
+              setState(() {});
+            },
+          ),
+        );
+      }).toList(),
+    );
   }
 
   @override
@@ -132,7 +184,7 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
                     .doc(widget.centerCode)
                     .collection('requests')
                     .where('centerCode', isEqualTo: widget.centerCode)
-                    .where('requesterRole', isEqualTo: Role.learner.name)
+                    .where('requesterRole', whereIn: [Role.learner.name, Role.instructor.name])
                     .where('status', isEqualTo: RequestStatus.pending.name)
                     .where('type', isEqualTo: RequestType.join.name)
                     .snapshots(),
@@ -165,35 +217,18 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
 
                       final users = {for (var u in usersSnap.data!.docs) u.id: u.data() as Map<String, dynamic>};
 
-                      return ExpansionTile(
-                        title: Text('Learner Join Requests (${requests.length})'),
-                        children: requests.map((req) {
-                          final user = users[req['requesterId']];
-                          final userName = user?['name'] ?? 'Unknown';
-                          final userEmail = user?['email'] ?? '';
+                      // Group requests by role
+                      final learnerRequests = requests.where((r) => r['requesterRole'] == Role.learner.name).toList();
+                      final instructorRequests =
+                          requests.where((r) => r['requesterRole'] == Role.instructor.name).toList();
 
-                          return ListTile(
-                            title: Text(userName),
-                            subtitle: Text(userEmail),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.check),
-                              onPressed: () async {
-                                // Approve request: Add learner to center + remove request
-                                await FirebaseFirestore.instance.collection('centers').doc(widget.centerCode).update({
-                                  'learners': FieldValue.arrayUnion([req['requesterId']])
-                                });
-                                // await req.reference.delete();
-                                await FirebaseFirestore.instance
-                                    .collection('centers')
-                                    .doc(widget.centerCode)
-                                    .collection('requests')
-                                    .doc(req.id)
-                                    .update({'status': RequestStatus.approved.name});
-                                setState(() {});
-                              },
-                            ),
-                          );
-                        }).toList(),
+                      return Column(
+                        children: [
+                          if (learnerRequests.isNotEmpty)
+                            _buildRequestTile('Learner Join Requests', learnerRequests, users, Role.learner),
+                          if (instructorRequests.isNotEmpty)
+                            _buildRequestTile('Instructor Join Requests', instructorRequests, users, Role.instructor),
+                        ],
                       );
                     },
                   );

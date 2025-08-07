@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:wordstory/data/interfaces/user_interface.dart';
+import 'package:wordstory/data/models/center.dart';
 import 'package:wordstory/data/repositories/auth_repository.dart';
 import 'package:wordstory/util/util_dialog.dart';
 // import '../services/auth_service.dart';
@@ -121,11 +122,12 @@ class AppAuthProvider with ChangeNotifier {
   }
 
   /// Register a new user with an email and password and display name.
-  Future<void> signUpWithEmail(BuildContext context, String email, String password, String displayName) async {
+  Future<void> signUpWithEmail(BuildContext context, String email, String password, String displayName,
+      {Role? role}) async {
     // _loading = true;
     // notifyListeners();
     try {
-      await _authRepository.signUpWithEmail(this, email, password, displayName);
+      await _authRepository.signUpWithEmail(this, email, password, displayName, role: role);
     } finally {
       // _loading = false;
       // notifyListeners();
@@ -134,12 +136,13 @@ class AppAuthProvider with ChangeNotifier {
 
   /// Sign in via Google.  The user may cancel the sign‑in flow, in
   /// which case the provider simply stops loading.
-  Future<void> signInWithGoogle(BuildContext context, bool isSignUp, {String? centerCode}) async {
+  Future<void> signInWithGoogle(BuildContext context, bool isSignUp, {String? centerCode, Role? role}) async {
     // _loading = true;
     // notifyListeners();
     try {
       DialogUtils.showLoader(context, message: isSignUp ? 'Sining Up' : 'Signing In');
-      final result = await _authRepository.signInWithGoogle(this, isSignUp: isSignUp, centerCode: centerCode);
+      final result =
+          await _authRepository.signInWithGoogle(this, isSignUp: isSignUp, centerCode: centerCode, role: role);
       if (result.success) {
         // ✅ Success
         if (context.mounted) {

@@ -219,7 +219,7 @@ class _HomeTab extends StatelessWidget {
                             )),
                   );
                 },
-                'enabled': user.isLearner || user.isPendingLearner,
+                'enabled': user.isLearner || user.isPendingLearner || user.isInstructor,
               },
             ],
           ),

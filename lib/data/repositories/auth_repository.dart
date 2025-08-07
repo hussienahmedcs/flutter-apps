@@ -26,7 +26,7 @@ class AuthRepository {
 
   Future<Result<UserCredential>> signUpWithEmail(
       AppAuthProvider auth, String email, String password, String displayName,
-      {bool signUpAsCenter = false, String? centerCode}) async {
+      {bool signUpAsCenter = false, String? centerCode, Role? role}) async {
     try {
       final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
       if (displayName.isNotEmpty) {
@@ -36,20 +36,19 @@ class AuthRepository {
       if (cred.user?.emailVerified == false) {
         await cred.user?.sendEmailVerification();
       }
-      Role role = Role.user;
+      // Role role = Role.user;
       if (signUpAsCenter) {
         role = Role.admin;
         String centerCode = displayName.toLowerCase().replaceAll(' ', '');
         final centerDetails = CenterDetails(name: displayName, code: centerCode, admin: cred.user!.uid);
         await CenterRepository.saveCenterInfo(centerDetails);
       } else if (!signUpAsCenter && centerCode != null) {
+        role = role ?? Role.learner;
         CenterRequest joinRequest = CenterRequest(
-            id: '-1',
-            requesterRole: Role.learner,
-            requesterId: cred.user!.uid,
-            type: RequestType.join,
-            centerCode: centerCode);
+            id: '-1', requesterRole: role, requesterId: cred.user!.uid, type: RequestType.join, centerCode: centerCode);
         await CenterRepository.sendJoinRequest(joinRequest);
+      } else {
+        role = role ?? Role.user;
       }
 
       final AppUser user = AppUser(id: cred.user!.uid, name: displayName, email: email, role: role);
@@ -86,10 +85,11 @@ class AuthRepository {
     }
   }
 
-  Future<Result<UserCredential>> signInWithGoogle(AppAuthProvider auth, {bool? isSignUp, String? centerCode}) async {
-    print('=================$isSignUp $centerCode');
+  Future<Result<UserCredential>> signInWithGoogle(AppAuthProvider auth,
+      {bool? isSignUp, String? centerCode, Role? role}) async {
+    print('=================$isSignUp $centerCode $role');
     try {
-      Role role = Role.user;
+      // Role role = Role.user;
       final userCred = await _signInWithGoogle();
       final uid = userCred?.user?.uid;
       if (uid == null) {
@@ -99,20 +99,19 @@ class AuthRepository {
       //learner signup -> send join request
       if (isSignUp == true) {
         if (centerCode != null) {
-          role = Role.pendingLearner;
           //send join center request
           print('=================joinRequest');
+          role = role ?? Role.learner;
           CenterRequest joinRequest = CenterRequest(
             id: '-1',
-            requesterRole: Role.learner,
+            requesterRole: role,
             requesterId: userCred?.user!.uid ?? '',
             type: RequestType.join,
             centerCode: centerCode,
           );
           await CenterRepository.sendJoinRequest(joinRequest);
           print('=================joinRequest sent');
-        }
-        if (centerCode == null) {
+        } else if (centerCode == null) {
           role = Role.user;
         }
         //User/learner signup
@@ -120,7 +119,7 @@ class AuthRepository {
             id: userCred?.user!.uid ?? '',
             name: userCred?.user!.displayName ?? '',
             email: userCred?.user!.email ?? '',
-            role: role);
+            role: role ?? Role.user);
         await saveUserDetails(user, 'online');
       }
 
