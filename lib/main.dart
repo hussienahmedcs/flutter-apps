@@ -6,10 +6,6 @@ import 'package:wordstory/providers/app_auth_provider.dart';
 import 'package:wordstory/screens/home_page.dart';
 
 import 'providers/theme_provider.dart';
-import 'providers/session_provider.dart';
-import 'providers/gamification_provider.dart';
-import 'providers/story_provider.dart';
-import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'theme.dart';
 import 'package:app_links/app_links.dart';
@@ -103,8 +99,10 @@ class _WordStoryAppState extends State<WordStoryApp> {
                         body: Center(child: CircularProgressIndicator()),
                       );
                     }
-                    // print("->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+                    print("->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>auth.isLoggedIn:${auth.isLoggedIn}");
                     // print(AuthProvider.userCenterWithRoles?.center.code ?? "No Center");
+
+                    print('Going to ${auth.isLoggedIn ? 'HomePage' : 'LoginScreen'}');
                     return
                         // MyLogoTestWidget();
                         auth.isLoggedIn

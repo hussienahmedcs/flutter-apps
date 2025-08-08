@@ -226,6 +226,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               leading: const Icon(Icons.logout),
               title: const Text('Sign Out'),
               onTap: () async {
+                if (!context.mounted) return;
+                // Pop every route so the rebuilt `home` (LoginScreen) is shown
+                Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
                 await user.signOut();
               },
             ),

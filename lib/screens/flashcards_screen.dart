@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wordstory/data/models/center.dart';
+import 'package:wordstory/data/models/center_config.dart';
 import 'package:wordstory/data/models/gamification_model.dart';
+import 'package:wordstory/data/models/session_model.dart';
+import 'package:wordstory/data/repositories/center_repository.dart';
+import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
-import 'package:wordstory/screens/dashboard_screen.dart';
-
 import '../data/models/entry_model.dart';
-import '../providers/gamification_provider.dart';
 
 class FlashcardsScreen extends StatefulWidget {
   const FlashcardsScreen({super.key});
@@ -20,7 +21,7 @@ class FlashcardsScreen extends StatefulWidget {
 class FlashcardsScreenState extends State<FlashcardsScreen> {
   List<Entry> _entries = [];
   List<String> _selectedSessionIds = [];
-  List<Map<String, dynamic>> _sessions = [];
+  List<Session> _sessions = [];
 
   int _currentIndex = 0;
   bool _loading = true;
@@ -30,6 +31,7 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
   bool showPrevBtn = false;
   bool showNextBtn = false;
   Gamification? gamification;
+  final SessionRepository _sessionRepository = SessionRepository();
 
   void reset() {
     if (!mounted) return;
@@ -50,16 +52,26 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
     final user = Provider.of<AppAuthProvider>(context, listen: false).user;
     if (user == null) return;
 
-    final query = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('sessions')
-        .orderBy('date', descending: true)
-        .get();
+    List<String> sessionOwnersIds = [];
+    CenterConfig? config;
+    CenterRepository _centerRepository = CenterRepository();
+    if (user.isLearner && user.centerCode != null) {
+      config = await _centerRepository.getCenterConfig(user.centerCode!);
+      if (config != null && config!.shareSessionsWithLearners) {
+        //get admin id
+        final centerInfo = await _centerRepository.getCenter(user.centerCode!);
+        if (centerInfo != null) sessionOwnersIds.add(centerInfo.admin);
+      }
+    } else {
+      sessionOwnersIds.add(user.uid); // user/ admin/ instructor/ or event learner with no center code
+    }
+
+    final sessionsResult = await _sessionRepository.getSessions(sessionOwnersIds, user.uid);
 
     if (!mounted) return;
     setState(() {
-      _sessions = query.docs.map((doc) => {'id': doc.id, 'name': doc['title'] ?? 'Untitled'}).toList();
+      _sessions = sessionsResult;
+      // _sessions = query.docs.map((doc) => {'id': doc.id, 'name': doc['title'] ?? 'Untitled'}).toList();
       _loading = false;
     });
   }
@@ -155,11 +167,11 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
     return StatefulBuilder(
       builder: (context, setInnerState) {
         final chipList = _sessions.map((session) {
-          final isSelected = _selectedSessionIds.contains(session['id']);
+          final isSelected = _selectedSessionIds.contains(session.id);
           return Padding(
             padding: const EdgeInsets.only(right: 8, bottom: 8),
             child: FilterChip(
-              label: Text(session['name']),
+              label: Text(session.title),
               selected: isSelected,
               showCheckmark: true,
               selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.18),
@@ -172,9 +184,9 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
               onSelected: (selected) {
                 setInnerState(() {
                   if (selected) {
-                    _selectedSessionIds.add(session['id']);
+                    _selectedSessionIds.add(session.id);
                   } else {
-                    _selectedSessionIds.remove(session['id']);
+                    _selectedSessionIds.remove(session.id);
                   }
                 });
               },

@@ -4,6 +4,7 @@ import 'package:wordstory/data/models/center_config.dart';
 import 'package:wordstory/data/models/gamification_model.dart';
 import 'package:wordstory/data/models/session_model.dart';
 import 'package:wordstory/data/models/story_model.dart';
+import 'package:wordstory/data/repositories/center_repository.dart';
 import 'package:wordstory/data/repositories/gamification_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 import 'package:wordstory/screens/admin/manage_center_page.dart';
@@ -21,9 +22,7 @@ import 'package:wordstory/widgets/streak_counter.dart';
 import 'package:wordstory/widgets/xp_progress_ring.dart';
 
 class HomePage extends StatefulWidget {
-  final CenterConfig? config;
-
-  const HomePage({super.key, this.config});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -35,15 +34,22 @@ class _HomePageState extends State<HomePage> {
   final List<Session> sessions = []; //context.watch<SessionProvider>().sessions;
   Gamification? gamification;
   final GamificationRepository _gamificationRepository = GamificationRepository();
+  final CenterRepository _centerRepository = CenterRepository();
+  CenterConfig? config;
+
   @override
   void initState() {
     super.initState();
-    _loadGamification();
+    loader();
   }
 
-  Future<void> _loadGamification() async {
+  Future<void> loader() async {
     final user = context.read<AppAuthProvider>().user!;
     final data = await _gamificationRepository.getGamification(user.uid);
+
+    // if (user.isUser) sessionOwnersIds.add(user.uid);
+    if (user.centerCode != null) config = await _centerRepository.getCenterConfig(user.centerCode!);
+
     setState(() {
       gamification = data;
     });
@@ -74,6 +80,19 @@ class _HomePageState extends State<HomePage> {
             QuickActionsGrid(
               icons: [
                 {
+                  'icon': Icons.person,
+                  'label': 'Profile',
+                  'onTap': () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    );
+                  },
+                  'enabled': user.isUser ||
+                      user.isAdmin ||
+                      (config != null && config!.learnerCanAccessExamPage && user.isLearner) ||
+                      (config != null && config!.teacherCanAccessExamPage && user.isInstructor),
+                },
+                {
                   'icon': Icons.add_circle_outline,
                   'label': 'New Session',
                   'onTap': () {
@@ -85,8 +104,8 @@ class _HomePageState extends State<HomePage> {
                   },
                   'enabled': user.isUser ||
                       user.isAdmin ||
-                      (widget.config != null && widget.config!.learnerCanCreateSession && user.isLearner) ||
-                      (widget.config != null && widget.config!.teacherCanCreateSession && user.isInstructor),
+                      (config != null && config!.learnerCanCreateSession && user.isLearner) ||
+                      (config != null && config!.teacherCanCreateSession && user.isInstructor),
                 },
                 {
                   'icon': Icons.style,
@@ -116,16 +135,6 @@ class _HomePageState extends State<HomePage> {
                       user.isUser || user.isAdmin || user.isLearner || user.isPendingLearner || user.isInstructor,
                 },
                 {
-                  'icon': Icons.person,
-                  'label': 'Profile',
-                  'onTap': () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                    );
-                  },
-                  'enabled': true,
-                },
-                {
                   'icon': Icons.quiz,
                   'label': 'Exam',
                   'onTap': () {
@@ -136,7 +145,7 @@ class _HomePageState extends State<HomePage> {
                   'enabled': user.isUser ||
                       user.isAdmin ||
                       user.isInstructor ||
-                      (widget.config != null && widget.config!.learnerCanAccessExamPage && user.isLearner),
+                      (config != null && config!.learnerCanAccessExamPage && user.isLearner),
                 },
                 {
                   'icon': Icons.settings,
