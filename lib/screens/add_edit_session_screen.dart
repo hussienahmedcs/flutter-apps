@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 import '../data/models/session_model.dart';
-import '../providers/session_provider.dart';
 
 /// Form screen used to create or edit a vocabulary session.  Users
 /// supply a title, date and optional notes.  When editing, fields
@@ -10,7 +10,7 @@ import '../providers/session_provider.dart';
 /// persisted via [SessionProvider].
 class AddEditSessionScreen extends StatefulWidget {
   final Session? session;
-  const AddEditSessionScreen({Key? key, this.session}) : super(key: key);
+  const AddEditSessionScreen({super.key, this.session});
 
   @override
   State<AddEditSessionScreen> createState() => _AddEditSessionScreenState();
@@ -21,6 +21,7 @@ class _AddEditSessionScreenState extends State<AddEditSessionScreen> {
   late TextEditingController _titleController;
   late TextEditingController _notesController;
   late DateTime _selectedDate;
+  final SessionRepository _sessionRepository = SessionRepository();
 
   @override
   void initState() {
@@ -64,7 +65,7 @@ class _AddEditSessionScreenState extends State<AddEditSessionScreen> {
       notes: _notesController.text.trim(),
       createdAt: widget.session?.createdAt ?? DateTime.now(),
     );
-    // await provider.saveSession(newSession);
+    await _sessionRepository.saveSession(newSession);
     Navigator.of(context).pop();
   }
 

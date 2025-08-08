@@ -63,7 +63,7 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
         if (centerInfo != null) sessionOwnersIds.add(centerInfo.admin);
       }
     } else {
-      sessionOwnersIds.add(user.uid);// user/ admin/ instructor/ or event learner with no center code
+      sessionOwnersIds.add(user.uid); // user/ admin/ instructor/ or event learner with no center code
     }
     final sessionsList = await _sessionRepository.getSessions(sessionOwnersIds, user.uid);
     setState(() {
@@ -74,15 +74,16 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
     });
   }
 
-  void _openSessionForm([Session? session]) {
+  void _openSessionForm([Session? session]) async {
     setState(() {
       _loading = false;
     });
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AddEditSessionScreen(session: session),
       ),
     );
+    loader();
   }
 
   @override
@@ -172,7 +173,10 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
           TextButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              await _sessionRepository.deleteSession(session.id, user.uid);
+              setState(() {
+                _loading = true;
+              });
+              await _sessionRepository.deleteSession(session.userId, session.id);
               loader();
             },
             child: const Text('Delete'),

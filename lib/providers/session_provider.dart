@@ -35,12 +35,7 @@
 //     }
 //   }
 
-//   /// Persist the given session.  If the session ID is empty a new
-//   /// document will be created.  Returns the ID of the saved session.
-//   Future<String> saveSession(Session session) async {
-//     if (_uid == null) throw StateError('Not authenticated');
-//     return _db.upsertSession(_uid!, session);
-//   }
+
 
 
 

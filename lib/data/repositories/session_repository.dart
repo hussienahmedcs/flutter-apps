@@ -92,4 +92,10 @@ class SessionRepository {
     final snapshot = await db.entriesRef(uid, sessionId).get();
     return snapshot.docs.map((doc) => Entry.fromMap(doc.id, doc.data())).toList();
   }
+
+  /// Persist the given session.  If the session ID is empty a new
+  /// document will be created.  Returns the ID of the saved session.
+  Future<String> saveSession(Session session) async {
+    return upsertSession(session.userId, session);
+  }
 }

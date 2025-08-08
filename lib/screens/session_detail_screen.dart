@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:wordstory/data/repositories/session_repository.dart';
-import 'package:wordstory/providers/app_auth_provider.dart';
 import '../data/models/entry_model.dart';
-import '../services/firestore_service.dart';
 import 'add_edit_entry_screen.dart';
 import '../data/models/session_model.dart';
 
@@ -24,7 +21,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
   int _currentTab = 0;
   final Set<String> _selectedEntryIds = {}; // Store IDs of selected entries
   bool get _isSelectionMode => _selectedEntryIds.isNotEmpty;
-  SessionRepository _sessionRepository = SessionRepository();
+  final SessionRepository _sessionRepository = SessionRepository();
 
   late TabController _tabController;
 
@@ -223,11 +220,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                   ? PopupMenuButton<String>(
                       onSelected: (value) async {
                         if (value == 'edit') {
-                          Navigator.of(context).push(
+                          await Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => AddEditEntryScreen(sessionId: sessionId, entry: entry),
                             ),
                           );
+                          
                         } else if (value == 'delete') {
                           await _sessionRepository.deleteEntry(uid, sessionId, entry.id);
                         }
