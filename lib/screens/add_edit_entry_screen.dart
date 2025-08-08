@@ -136,10 +136,11 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
 
   void _save() async {
     if (!_formKey.currentState!.validate()) return;
-    final uid = Provider.of<SessionProvider>(context, listen: false)
-        .sessions
-        .first
-        .userId; // assuming at least one session has userId
+    final uid = '';
+    // Provider.of<SessionProvider>(context, listen: false)
+    //     .sessions
+    //     .first
+    //     .userId; // assuming at least one session has userId
     final entry = Entry(
       id: widget.entry?.id ?? '',
       sessionId: widget.sessionId,
@@ -155,15 +156,15 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
     await service.upsertEntry(uid, widget.sessionId, entry);
     // Award XP based on entry type
     // ignore: use_build_context_synchronously
-    final gamification = Provider.of<GamificationProvider>(context, listen: false);
+    // final gamification = Provider.of<GamificationProvider>(context, listen: false);
     int xp = 0;
     if (entry.type == EntryType.word) {
       xp = 10;
     } else {
       xp = 20;
     }
-    gamification.addXp(xp);
-    gamification.registerDailyActivity();
+    // gamification.addXp(xp);
+    // gamification.registerDailyActivity();
 
     //Clear Form
     setState(() {
@@ -205,10 +206,10 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
     _showSavingDialog(); // Show loader
 
     try {
-      final uid = Provider.of<SessionProvider>(context, listen: false).sessions.first.userId;
+      // final uid = Provider.of<SessionProvider>(context, listen: false).sessions.first.userId;
 
       final service = FirestoreService();
-      final gamification = Provider.of<GamificationProvider>(context, listen: false);
+      // final gamification = Provider.of<GamificationProvider>(context, listen: false);
       int totalXp = 0;
 
       for (final entry in _ocrEntries) {
@@ -223,12 +224,12 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
           difficulty: _difficulty,
           addedAt: DateTime.now(),
         );
-        await service.upsertEntry(uid, widget.sessionId, newEntry);
+        // await service.upsertEntry(uid, widget.sessionId, newEntry);
         totalXp += newEntry.type == EntryType.word ? 10 : 20;
       }
 
-      gamification.addXp(totalXp);
-      gamification.registerDailyActivity();
+      // gamification.addXp(totalXp);
+      // gamification.registerDailyActivity();
 
       setState(() {
         _ocrEntries.clear();

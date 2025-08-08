@@ -54,7 +54,7 @@ class _AddEditSessionScreenState extends State<AddEditSessionScreen> {
 
   void _save() async {
     if (!_formKey.currentState!.validate()) return;
-    final provider = context.read<SessionProvider>();
+    // final provider = context.read<SessionProvider>();
     final uid = Provider.of<AppAuthProvider>(context, listen: false).user?.uid ?? '';
     final newSession = Session(
       id: widget.session?.id ?? '',
@@ -64,7 +64,7 @@ class _AddEditSessionScreenState extends State<AddEditSessionScreen> {
       notes: _notesController.text.trim(),
       createdAt: widget.session?.createdAt ?? DateTime.now(),
     );
-    await provider.saveSession(newSession);
+    // await provider.saveSession(newSession);
     Navigator.of(context).pop();
   }
 

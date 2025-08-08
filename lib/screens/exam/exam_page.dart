@@ -26,55 +26,56 @@ class _ExamPageState extends State<ExamPage> {
       appBar: AppBar(
         title: const Text('Start Exam'),
       ),
-      body: user == null
-          ? const Center(child: Text('Not authenticated'))
-          : StreamBuilder<List<Session>>(
-              stream: firestoreService.watchSessions(user.uid),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final sessions = snapshot.data ?? [];
-                if (sessions.isEmpty) {
-                  return const Center(child: Text('No sessions found.'));
-                }
-                return ListView.builder(
-                  itemCount: sessions.length,
-                  itemBuilder: (context, index) {
-                    final session = sessions[index];
-                    final isSelected = _selectedSessionIds.contains(session.id);
-                    return ListTile(
-                      title: Text(session.title),
-                      subtitle: Text(
-                        '${0} words — ${DateFormat('dd/MM/yyyy').format(session.date)}',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                      leading: Checkbox(
-                        value: isSelected,
-                        onChanged: (checked) {
-                          setState(() {
-                            if (checked == true) {
-                              _selectedSessionIds.add(session.id);
-                            } else {
-                              _selectedSessionIds.remove(session.id);
-                            }
-                          });
-                        },
-                      ),
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedSessionIds.remove(session.id);
-                          } else {
-                            _selectedSessionIds.add(session.id);
-                          }
-                        });
-                      },
-                    );
-                  },
-                );
-              },
-            ),
+      body:
+          // user == null ?
+          const Center(child: Text('Not authenticated')),
+      // : StreamBuilder<List<Session>>(
+      //     stream: firestoreService.watchSessions([user.uid]), //todo add list
+      //     builder: (context, snapshot) {
+      //       if (snapshot.connectionState == ConnectionState.waiting) {
+      //         return const Center(child: CircularProgressIndicator());
+      //       }
+      //       final sessions = snapshot.data ?? [];
+      //       if (sessions.isEmpty) {
+      //         return const Center(child: Text('No sessions found.'));
+      //       }
+      //       return ListView.builder(
+      //         itemCount: sessions.length,
+      //         itemBuilder: (context, index) {
+      //           final session = sessions[index];
+      //           final isSelected = _selectedSessionIds.contains(session.id);
+      //           return ListTile(
+      //             title: Text(session.title),
+      //             subtitle: Text(
+      //               '${0} words — ${DateFormat('dd/MM/yyyy').format(session.date)}',
+      //               style: const TextStyle(fontSize: 12, color: Colors.grey),
+      //             ),
+      //             leading: Checkbox(
+      //               value: isSelected,
+      //               onChanged: (checked) {
+      //                 setState(() {
+      //                   if (checked == true) {
+      //                     _selectedSessionIds.add(session.id);
+      //                   } else {
+      //                     _selectedSessionIds.remove(session.id);
+      //                   }
+      //                 });
+      //               },
+      //             ),
+      //             onTap: () {
+      //               setState(() {
+      //                 if (isSelected) {
+      //                   _selectedSessionIds.remove(session.id);
+      //                 } else {
+      //                   _selectedSessionIds.add(session.id);
+      //                 }
+      //               });
+      //             },
+      //           );
+      //         },
+      //       );
+      //     },
+      //   ),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),

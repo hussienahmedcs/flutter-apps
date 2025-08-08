@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Session {
   final String id;
   final String userId;
+  final bool isShared;
   final String title;
   final DateTime date;
   final String? notes;
@@ -15,6 +16,7 @@ class Session {
   Session({
     required this.id,
     required this.userId,
+    this.isShared = false,
     required this.title,
     required this.date,
     this.notes,
@@ -25,6 +27,7 @@ class Session {
     return Session(
       id: id,
       userId: data['user_id'] as String? ?? '',
+      isShared: data['is_shared'] as bool? ?? false,
       title: data['title'] as String? ?? '',
       date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
       notes: data['notes'] as String?,
@@ -35,6 +38,7 @@ class Session {
   Map<String, dynamic> toMap() {
     return {
       'user_id': userId,
+      'is_shared': isShared,
       'title': title,
       'date': Timestamp.fromDate(date),
       if (notes != null && notes!.isNotEmpty) 'notes': notes,

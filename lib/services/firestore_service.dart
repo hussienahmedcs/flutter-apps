@@ -37,12 +37,33 @@ class FirestoreService {
   /// Listen to all sessions for a given user.  This stream emits
   /// whenever the sessions collection is modified.  Sessions are
   /// ordered by their date descending.
-  Stream<List<Session>> watchSessions(String uid) {
-    return _sessionsRef(uid)
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => Session.fromMap(doc.id, doc.data())).toList());
-  }
+  // Stream<List<Session>> watchSessions(List<String?> uid) {
+  //   return _sessionsRef(uid).orderBy('date', descending: true).snapshots().map((snapshot) => snapshot.docs.map((doc) {
+  //         final data = doc.data();
+  //         if (data['user_id'] == uid) {
+  //           data['is_shared'] = false;
+  //         } else {
+  //           data['is_shared'] = true;
+  //         }
+  //         return Session.fromMap(doc.id, data);
+  //       }).toList());
+  // }
+
+  // Stream<List<Session>> watchSessions(List<String?> uidList) {
+  //   final sessionsRef = FirebaseFirestore.instance.collectionGroup('sessions');
+
+  //   return sessionsRef.where('user_id', whereIn: uidList).orderBy('date', descending: true).snapshots().map((snapshot) {
+  //     return snapshot.docs.map((doc) {
+  //       final data = doc.data();
+  //       final sessionOwner = data['user_id'] as String;
+
+  //       // Mark is_shared = true if session is from someone else
+  //       data['is_shared'] = !uidList.contains(sessionOwner);
+
+  //       return Session.fromMap(doc.id, data);
+  //     }).toList();
+  //   });
+  // }
 
   /// Create or update a session.  If [session.id] is blank a new
   /// document will be created.  Returns the newly assigned document ID.

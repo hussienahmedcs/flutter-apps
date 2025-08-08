@@ -7,33 +7,33 @@ import 'package:wordstory/data/models/center_with_role.dart';
 class CenterRepository {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  static Future<CenterWithRole?> fetchUserCenterWithRole(String uid) async {
+  Future<CenterWithRole?> fetchUserCenterWithRole(String uid) async {
     // 1. Check if user is admin
     var adminSnap = await _firestore.collection('centers').where('admin', isEqualTo: uid).limit(1).get();
     if (adminSnap.docs.isNotEmpty) {
       final doc = adminSnap.docs.first;
-      return CenterWithRole(CenterDetails.fromMap(doc.id, doc.data()), Role.admin);
+      return CenterWithRole(CenterDetails.fromMap(doc.data()), Role.admin);
     }
 
     // 2. Check if user is in admins list
     var adminsSnap = await _firestore.collection('centers').where('admins', arrayContains: uid).limit(1).get();
     if (adminsSnap.docs.isNotEmpty) {
       final doc = adminsSnap.docs.first;
-      return CenterWithRole(CenterDetails.fromMap(doc.id, doc.data()), Role.admin);
+      return CenterWithRole(CenterDetails.fromMap(doc.data()), Role.admin);
     }
 
     // 3. Check if user is instructor
     var teachersSnap = await _firestore.collection('centers').where('teachers', arrayContains: uid).limit(1).get();
     if (teachersSnap.docs.isNotEmpty) {
       final doc = teachersSnap.docs.first;
-      return CenterWithRole(CenterDetails.fromMap(doc.id, doc.data()), Role.instructor);
+      return CenterWithRole(CenterDetails.fromMap(doc.data()), Role.instructor);
     }
 
     // 4. Check if user is learner
     var learnersSnap = await _firestore.collection('centers').where('learners', arrayContains: uid).limit(1).get();
     if (learnersSnap.docs.isNotEmpty) {
       final doc = learnersSnap.docs.first;
-      return CenterWithRole(CenterDetails.fromMap(doc.id, doc.data()), Role.learner);
+      return CenterWithRole(CenterDetails.fromMap(doc.data()), Role.learner);
     }
 
     // 5. Check if user has a pending join request
@@ -51,7 +51,7 @@ class CenterRepository {
 
       if (centerDoc.exists) {
         return CenterWithRole(
-          CenterDetails.fromMap(centerDoc.id, centerDoc.data()!),
+          CenterDetails.fromMap(centerDoc.data()!),
           Role.pendingLearner,
         );
       }
@@ -68,7 +68,7 @@ class CenterRepository {
     await _firestore.collection('centers').doc(center.code).set(center.toMap());
   }
 
-  static Future<void> sendJoinRequest(CenterRequest joinRequest) async {
+  Future<void> sendJoinRequest(CenterRequest joinRequest) async {
     try {
       final collectionRef = _firestore.collection('centers').doc(joinRequest.centerCode).collection('requests');
 
@@ -107,5 +107,20 @@ class CenterRepository {
         .limit(1)
         .get();
     return query.docs.isNotEmpty;
+  }
+
+  Future<CenterDetails?> getCenter(String centerCode) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('centers').doc(centerCode).get();
+      final raw = doc.data() as Map<String, dynamic>;
+      print(raw);
+      print('00000000000000000000000000000000000000000000000000000');
+      final res = CenterDetails.fromMap(raw);
+      print('admin2${res.admin}');
+      return res;
+    } catch (e) {
+      print(e.toString());
+      return null;
+    }
   }
 }

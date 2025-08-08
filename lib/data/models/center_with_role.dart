@@ -15,7 +15,7 @@ class CenterWithRole {
 
   factory CenterWithRole.fromMap(Map<String, dynamic> map) {
     return CenterWithRole(
-      CenterDetails.fromMap(map['center']['id'] ?? '', Map<String, dynamic>.from(map['center'] ?? {})),
+      CenterDetails.fromMap(Map<String, dynamic>.from(map['center'] ?? {})),
       Role.values.firstWhere((e) => e.name == map['role'], orElse: () => Role.user),
     );
   }

@@ -12,7 +12,8 @@ class MyStoriesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stories = context.watch<StoryProvider>().stories;
+    // final stories = context.watch<StoryProvider>().stories;
+    final stories = null;
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Stories'),
@@ -35,8 +36,7 @@ class MyStoriesScreen extends StatelessWidget {
                   ),
                   child: ListTile(
                     title: Text(story.title),
-                    subtitle: Text(
-                        story.createdAt.toLocal().toString().split(' ').first),
+                    subtitle: Text(story.createdAt.toLocal().toString().split(' ').first),
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -47,11 +47,11 @@ class MyStoriesScreen extends StatelessWidget {
                     trailing: PopupMenuButton<String>(
                       onSelected: (value) async {
                         if (value == 'delete') {
-                          final provider = context.read<StoryProvider>();
-                          await provider.deleteStory(story.id);
+                          // final provider = context.read<StoryProvider>();
+                          // await provider.deleteStory(story.id);
                         } else if (value == 'export') {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Export not implemented.')));
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(const SnackBar(content: Text('Export not implemented.')));
                         }
                       },
                       itemBuilder: (context) => const [

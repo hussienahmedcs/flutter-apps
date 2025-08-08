@@ -31,16 +31,17 @@ class _StoryBuilderScreenState extends State<StoryBuilderScreen> {
     super.initState();
     if (widget.editStoryId != null) {
       _editingExisting = true;
-      final storyProvider = Provider.of<StoryProvider>(context, listen: false);
-      final story = storyProvider.stories.firstWhere((s) => s.id == widget.editStoryId,
-          orElse: () => Story(
-                id: '',
-                sessionId: '',
-                title: '',
-                content: '',
-                usedWords: [],
-                createdAt: DateTime.now(),
-              ));
+      // final storyProvider = Provider.of<StoryProvider>(context, listen: false);
+      final story = //storyProvider.stories.firstWhere((s) => s.id == widget.editStoryId, orElse: () =>
+          Story(
+        id: '',
+        sessionId: '',
+        title: '',
+        content: '',
+        usedWords: [],
+        createdAt: DateTime.now(),
+        //)
+      );
       _editingStory = story;
       _titleController.text = story.title;
       _contentController.text = story.content;
@@ -146,26 +147,26 @@ class _StoryBuilderScreenState extends State<StoryBuilderScreen> {
     }
     final user = Provider.of<AppAuthProvider>(context, listen: false).user;
     if (user == null) return;
-    final storyProvider = Provider.of<StoryProvider>(context, listen: false);
+    // final storyProvider = Provider.of<StoryProvider>(context, listen: false);
 
-    final story = Story(
-      id: widget.editStoryId ?? '',
-      sessionId: _selectedSessionIds.join(','), // You may wish to support multiple in your model!
-      title: title,
-      content: content,
-      usedWords: [], // You can extract which words were used in the story for stats
-      createdAt: widget.editStoryId != null
-          ? storyProvider.stories.firstWhere((s) => s.id == widget.editStoryId!).createdAt
-          : DateTime.now(),
-    );
-    await storyProvider.saveStory(story);
+    // final story = Story(
+    //   id: widget.editStoryId ?? '',
+    //   sessionId: _selectedSessionIds.join(','), // You may wish to support multiple in your model!
+    //   title: title,
+    //   content: content,
+    //   usedWords: [], // You can extract which words were used in the story for stats
+    //   createdAt: widget.editStoryId != null
+    //       ? storyProvider.stories.firstWhere((s) => s.id == widget.editStoryId!).createdAt
+    //       : DateTime.now(),
+    // );
+    // await storyProvider.saveStory(story);
     // XP logic here, if needed
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    final sessions = context.watch<SessionProvider>().sessions;
+    final List<Session> sessions = []; //context.watch<SessionProvider>().sessions;
     return Scaffold(
       appBar: AppBar(
         title: Text(_editingExisting ? 'Edit Story' : 'New Story'),

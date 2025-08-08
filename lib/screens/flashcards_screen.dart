@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wordstory/data/models/center.dart';
+import 'package:wordstory/data/models/gamification_model.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 import 'package:wordstory/screens/dashboard_screen.dart';
 
@@ -28,6 +29,7 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
   Role? role;
   bool showPrevBtn = false;
   bool showNextBtn = false;
+  Gamification? gamification;
 
   void reset() {
     if (!mounted) return;
@@ -116,9 +118,11 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
       _currentIndex = _entries.length;
     });
 
-    final gamification = Provider.of<GamificationProvider>(context, listen: false);
-    gamification.addXp(xp);
-    gamification.registerDailyActivity();
+    // final gamification = Provider.of<GamificationProvider>(context, listen: false);
+    // if (gamification != null) {
+    //   gamification!.addXp(xp);
+    //   gamification!.registerDailyActivity();
+    // }
   }
 
   @override
@@ -423,14 +427,13 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              if (Navigator.of(context).canPop())
-                Navigator.of(context).pop();
-              else {
-                DashboardScreen.switchToHome(context);
-                setState(() {
-                  _currentIndex = 0;
-                });
-              }
+              if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+              // else {
+              //   DashboardScreen.switchToHome(context);
+              //   setState(() {
+              //     _currentIndex = 0;
+              //   });
+              // }
             },
             child: const Text('Back to Home'),
           ),

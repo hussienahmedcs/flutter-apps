@@ -1,7 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:developer';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -23,6 +21,7 @@ class AuthRepository {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   Future<bool> get isLoggedIn => _googleSignIn.isSignedIn();
   User? get currentUser => _auth.currentUser;
+  final CenterRepository _centerRepository = CenterRepository();
 
   Future<Result<UserCredential>> signUpWithEmail(
       AppAuthProvider auth, String email, String password, String displayName,
@@ -46,7 +45,7 @@ class AuthRepository {
         role = role ?? Role.learner;
         CenterRequest joinRequest = CenterRequest(
             id: '-1', requesterRole: role, requesterId: cred.user!.uid, type: RequestType.join, centerCode: centerCode);
-        await CenterRepository.sendJoinRequest(joinRequest);
+        await _centerRepository.sendJoinRequest(joinRequest);
       } else {
         role = role ?? Role.user;
       }
@@ -54,7 +53,7 @@ class AuthRepository {
       final AppUser user =
           AppUser(id: cred.user!.uid, name: displayName, email: email, role: role, centerCode: centerCode);
       await saveUserDetails(user, 'both');
-      final cwr = await CenterRepository.fetchUserCenterWithRole(cred.user!.uid);
+      final cwr = await _centerRepository.fetchUserCenterWithRole(cred.user!.uid);
       await saveCenterLocally(cwr);
       return Result.success(cred, message: "Sign up successful");
     } on FirebaseAuthException catch (e) {
@@ -70,7 +69,7 @@ class AuthRepository {
       String password) async {
     try {
       final cred = await _auth.signInWithEmailAndPassword(email: email, password: password);
-      final cwr = await CenterRepository.fetchUserCenterWithRole(cred.user!.uid);
+      final cwr = await _centerRepository.fetchUserCenterWithRole(cred.user!.uid);
       await saveCenterLocally(cwr);
       //get user info from online and save locally
       AppUser? u = await getUserDetailsFromFB(cred.user!.uid);
@@ -110,7 +109,7 @@ class AuthRepository {
             type: RequestType.join,
             centerCode: centerCode,
           );
-          await CenterRepository.sendJoinRequest(joinRequest);
+          await _centerRepository.sendJoinRequest(joinRequest);
           print('=================joinRequest sent');
         } else if (centerCode == null) {
           role = Role.user;
@@ -127,7 +126,7 @@ class AuthRepository {
       }
 
       print('=================login');
-      final cwr = await CenterRepository.fetchUserCenterWithRole(uid);
+      final cwr = await _centerRepository.fetchUserCenterWithRole(uid);
       await saveCenterLocally(cwr);
       print('=================data saved locally');
 

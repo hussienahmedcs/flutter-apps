@@ -116,7 +116,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
           );
         },
       ),
-      floatingActionButton: !_isSelectionMode
+      floatingActionButton: !_isSelectionMode && !widget.session.isShared
           ? Builder(
               builder: (innerContext) {
                 return FloatingActionButton(
@@ -154,11 +154,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
 
         return GestureDetector(
           onLongPress: () {
-            setState(() {
-              _selectedEntryIds.add(entry.id);
-            });
+            if (!widget.session.isShared) {
+              setState(() {
+                _selectedEntryIds.add(entry.id);
+              });
+            }
           },
           onTap: () {
+            if (widget.session.isShared) return;
             if (_isSelectionMode) {
               setState(() {
                 if (selected) {
@@ -213,7 +216,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                   Text('Difficulty: ${entry.difficulty.toString().split('.').last}'),
                 ],
               ),
-              trailing: !_isSelectionMode
+              trailing: !_isSelectionMode && !widget.session.isShared
                   ? PopupMenuButton<String>(
                       onSelected: (value) async {
                         if (value == 'edit') {

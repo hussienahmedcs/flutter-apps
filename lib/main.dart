@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:wordstory/data/models/center.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
+import 'package:wordstory/screens/home_page.dart';
 
 import 'providers/theme_provider.dart';
 import 'providers/session_provider.dart';
@@ -74,23 +75,21 @@ class _WordStoryAppState extends State<WordStoryApp> {
           providers: [
             ChangeNotifierProvider(create: (_) => AppAuthProvider()),
             ChangeNotifierProvider(create: (_) => ThemeProvider()),
-            ChangeNotifierProxyProvider<AppAuthProvider, SessionProvider>(
-              create: (_) => SessionProvider(),
-              update: (_, auth, sessions) => sessions!..updateUser(auth.user),
-            ),
-            ChangeNotifierProxyProvider<AppAuthProvider, GamificationProvider>(
-              create: (_) => GamificationProvider(),
-              update: (_, auth, gam) => gam!..updateUser(auth.user),
-            ),
-            ChangeNotifierProxyProvider<AppAuthProvider, StoryProvider>(
-              create: (_) => StoryProvider(),
-              update: (_, auth, story) => story!..updateUser(auth.user),
-            ),
+            // ChangeNotifierProxyProvider<AppAuthProvider, SessionProvider>(
+            //   create: (_) => SessionProvider(),
+            //   update: (_, auth, sessions) => sessions!..updateUser([auth.user?.uid]),
+            // ),
+            // ChangeNotifierProxyProvider<AppAuthProvider, GamificationProvider>(
+            //   create: (_) => GamificationProvider(),
+            //   update: (_, auth, gam) => gam!..updateUser(auth.user),
+            // ),
+            // ChangeNotifierProxyProvider<AppAuthProvider, StoryProvider>(
+            //   create: (_) => StoryProvider(),
+            //   update: (_, auth, story) => story!..updateUser(auth.user),
+            // ),
           ],
           child: Consumer<ThemeProvider>(
             builder: (context, theme, _) {
-              print('HUSSEIN......................................................');
-              print(centerDetails);
               return MaterialApp(
                 title: centerDetails == null ? 'WordStory' : 'Word Story',
                 theme: WordStoryTheme.lightTheme,
@@ -109,7 +108,7 @@ class _WordStoryAppState extends State<WordStoryApp> {
                     return
                         // MyLogoTestWidget();
                         auth.isLoggedIn
-                            ? const DashboardScreen()
+                            ? const HomePage()
                             : LoginScreen(
                                 initialCenterCode: centerDetails?['center'].toString(),
                                 role: centerDetails?['type'].toString() == '101'

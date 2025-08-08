@@ -1,7 +1,11 @@
+// import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/repositories/center_repository.dart';
+import 'package:wordstory/data/repositories/session_repository.dart';
+import 'package:wordstory/providers/app_auth_provider.dart';
 import '../data/models/session_model.dart';
-import '../providers/session_provider.dart';
+// import '../providers/session_provider.dart';
 import 'add_edit_session_screen.dart';
 import 'session_detail_screen.dart';
 
@@ -22,6 +26,12 @@ class SessionsListScreen extends StatefulWidget {
 }
 
 class _SessionsListScreenState extends State<SessionsListScreen> {
+  final CenterRepository _centerRepository = CenterRepository();
+  final SessionRepository _sessionRepository = SessionRepository();
+  final List<String?> sessionOwnersIds = [];
+  final List<Session> sessions = [];
+  bool _loading = true;
+
   @override
   void initState() {
     super.initState();
@@ -30,10 +40,36 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _openSessionForm();
       });
+    } else {
+      loader();
     }
   }
 
+  Future<void> loader() async {
+    final user = Provider.of<AppAuthProvider>(context, listen: false).user!;
+
+    if (user.isUser) sessionOwnersIds.add(user.uid);
+    if (user.isLearner && user.centerCode != null) {
+      final config = await _centerRepository.getCenterConfig(user.centerCode!);
+      if (config != null && config.shareSessionsWithLearners) {
+        //get admin id
+        final centerInfo = await _centerRepository.getCenter(user.centerCode!);
+        if (centerInfo != null) sessionOwnersIds.add(centerInfo.admin);
+      }
+    }
+    final sessions = await _sessionRepository.getSessions(sessionOwnersIds, user.uid);
+    setState(() {
+      this.sessions.addAll(sessions);
+    });
+    setState(() {
+      _loading = false;
+    });
+  }
+
   void _openSessionForm([Session? session]) {
+    setState(() {
+      _loading = false;
+    });
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AddEditSessionScreen(session: session),
@@ -43,8 +79,12 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final sessionProvider = context.watch<SessionProvider>();
-    final sessions = sessionProvider.sessions;
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    // print(sessionOwnersIds.length);
+    // final sessionProvider = context.watch<SessionProvider>()..updateUser(sessionOwnersIds);
+    // sessionProvider.sessions;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sessions'),
@@ -68,25 +108,30 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
                   child: ListTile(
                     title: Text(session.title),
                     subtitle: Text(session.date.toLocal().toString().split(' ').first),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          _openSessionForm(session);
-                        } else if (value == 'delete') {
-                          _deleteSession(sessionProvider, session);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Text('Edit'),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Text('Delete'),
-                        ),
-                      ],
-                    ),
+                    trailing: session.isShared
+                        ? const Tooltip(
+                            message: 'This session is shared and cannot be edited',
+                            child: Icon(Icons.lock_outline, size: 20),
+                          )
+                        : PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == 'edit') {
+                                _openSessionForm(session);
+                              } else if (value == 'delete') {
+                                // _deleteSession(sessionProvider, session);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Text('Edit'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Delete'),
+                              ),
+                            ],
+                          ),
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -105,26 +150,26 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
     );
   }
 
-  void _deleteSession(SessionProvider provider, Session session) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Session'),
-        content: Text('Are you sure you want to delete "${session.title}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await provider.deleteSession(session.id);
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _deleteSession(SessionProvider provider, Session session) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Delete Session'),
+  //       content: Text('Are you sure you want to delete "${session.title}"?'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () async {
+  //             Navigator.of(context).pop();
+  //             await provider.deleteSession(session.id);
+  //           },
+  //           child: const Text('Delete'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 }
