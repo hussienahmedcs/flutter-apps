@@ -42,11 +42,7 @@
 //     return _db.upsertSession(_uid!, session);
 //   }
 
-//   /// Delete the session with the given ID and all its entries.
-//   Future<void> deleteSession(String sessionId) async {
-//     if (_uid == null) throw StateError('Not authenticated');
-//     await _db.deleteSession(_uid!, sessionId);
-//   }
+
 
 //   @override
 //   void dispose() {

@@ -1,6 +1,8 @@
 // import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/interfaces/user_interface.dart';
+import 'package:wordstory/data/models/center_config.dart';
 import 'package:wordstory/data/repositories/center_repository.dart';
 import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
@@ -29,8 +31,9 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
   final CenterRepository _centerRepository = CenterRepository();
   final SessionRepository _sessionRepository = SessionRepository();
   final List<String?> sessionOwnersIds = [];
-  final List<Session> sessions = [];
+  List<Session> sessions = [];
   bool _loading = true;
+  CenterConfig? config;
 
   @override
   void initState() {
@@ -46,20 +49,23 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
   }
 
   Future<void> loader() async {
+    setState(() {
+      sessions = [];
+    });
     final user = Provider.of<AppAuthProvider>(context, listen: false).user!;
 
     if (user.isUser) sessionOwnersIds.add(user.uid);
     if (user.isLearner && user.centerCode != null) {
-      final config = await _centerRepository.getCenterConfig(user.centerCode!);
-      if (config != null && config.shareSessionsWithLearners) {
+      config = await _centerRepository.getCenterConfig(user.centerCode!);
+      if (config != null && config!.shareSessionsWithLearners) {
         //get admin id
         final centerInfo = await _centerRepository.getCenter(user.centerCode!);
         if (centerInfo != null) sessionOwnersIds.add(centerInfo.admin);
       }
     }
-    final sessions = await _sessionRepository.getSessions(sessionOwnersIds, user.uid);
+    final sessionsList = await _sessionRepository.getSessions(sessionOwnersIds, user.uid);
     setState(() {
-      this.sessions.addAll(sessions);
+      sessions.addAll(sessionsList);
     });
     setState(() {
       _loading = false;
@@ -82,9 +88,7 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    // print(sessionOwnersIds.length);
-    // final sessionProvider = context.watch<SessionProvider>()..updateUser(sessionOwnersIds);
-    // sessionProvider.sessions;
+    final user = Provider.of<AppAuthProvider>(context, listen: false).user!;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sessions'),
@@ -118,7 +122,7 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
                               if (value == 'edit') {
                                 _openSessionForm(session);
                               } else if (value == 'delete') {
-                                // _deleteSession(sessionProvider, session);
+                                _deleteSession(session, user);
                               }
                             },
                             itemBuilder: (context) => [
@@ -143,33 +147,36 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
                 );
               },
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openSessionForm(),
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: user.isLearner && config != null && !config!.learnerCanCreateSession
+          ? null
+          : FloatingActionButton(
+              onPressed: () => _openSessionForm(),
+              child: const Icon(Icons.add),
+            ),
     );
   }
 
-  // void _deleteSession(SessionProvider provider, Session session) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: const Text('Delete Session'),
-  //       content: Text('Are you sure you want to delete "${session.title}"?'),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.of(context).pop(),
-  //           child: const Text('Cancel'),
-  //         ),
-  //         TextButton(
-  //           onPressed: () async {
-  //             Navigator.of(context).pop();
-  //             await provider.deleteSession(session.id);
-  //           },
-  //           child: const Text('Delete'),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
+  void _deleteSession(Session session, UserInterface user) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Session'),
+        content: Text('Are you sure you want to delete "${session.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _sessionRepository.deleteSession(session.id, user.uid);
+              loader();
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
 }

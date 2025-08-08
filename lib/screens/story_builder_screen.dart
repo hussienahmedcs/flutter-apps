@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/repositories/session_repository.dart';
 import '../data/models/session_model.dart';
 import '../data/models/story_model.dart';
 import '../data/models/entry_model.dart';
-import '../providers/session_provider.dart';
-import '../providers/story_provider.dart';
 import '../providers/app_auth_provider.dart';
 import '../services/firestore_service.dart';
 import '../services/gemini_ocr_service.dart'; // Your Gemini/GPT AI service
@@ -25,6 +24,7 @@ class _StoryBuilderScreenState extends State<StoryBuilderScreen> {
   bool _loadingStory = false;
   bool _editingExisting = false;
   Story? _editingStory;
+  final SessionRepository _sessionRepository = SessionRepository();
 
   @override
   void initState() {
@@ -108,7 +108,7 @@ class _StoryBuilderScreenState extends State<StoryBuilderScreen> {
       Set<String> allWords = {};
 
       for (final sessionId in _selectedSessionIds) {
-        final entries = await service.getEntries(user.uid, sessionId);
+        final entries = await _sessionRepository.getEntries(user.uid, sessionId);
         allWords.addAll(entries.where((e) => e.type == EntryType.word).map((e) => e.content));
       }
 

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/interfaces/user_interface.dart';
 import 'package:wordstory/data/models/word_entry.dart';
+import 'package:wordstory/data/repositories/gamification_repository.dart';
+import 'package:wordstory/data/repositories/session_repository.dart';
+import 'package:wordstory/providers/app_auth_provider.dart';
 // import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../data/models/entry_model.dart';
@@ -38,6 +42,8 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
   bool _isListening = false;
   bool _isScanning = false;
   List<WordEntry> _ocrEntries = [];
+  final SessionRepository _sessionRepository = SessionRepository();
+  final GamificationRepository _gamificationRepository = GamificationRepository();
 
   @override
   void initState() {
@@ -134,13 +140,8 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
     setState(() => _isListening = false);
   }
 
-  void _save() async {
+  void _save(UserInterface user) async {
     if (!_formKey.currentState!.validate()) return;
-    final uid = '';
-    // Provider.of<SessionProvider>(context, listen: false)
-    //     .sessions
-    //     .first
-    //     .userId; // assuming at least one session has userId
     final entry = Entry(
       id: widget.entry?.id ?? '',
       sessionId: widget.sessionId,
@@ -152,11 +153,10 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
       difficulty: _difficulty,
       addedAt: widget.entry?.addedAt ?? DateTime.now(),
     );
-    final service = FirestoreService();
-    await service.upsertEntry(uid, widget.sessionId, entry);
+    await _sessionRepository.upsertEntry(user.uid, widget.sessionId, entry);
     // Award XP based on entry type
     // ignore: use_build_context_synchronously
-    // final gamification = Provider.of<GamificationProvider>(context, listen: false);
+    final gamification = await _gamificationRepository.getGamification(user.uid);
     int xp = 0;
     if (entry.type == EntryType.word) {
       xp = 10;
@@ -247,6 +247,8 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AppAuthProvider>().user!;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.entry == null ? 'Add Entry' : 'Edit Entry'),
@@ -345,7 +347,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _save,
+                onPressed: () => _save(user),
                 child: Text(_ocrEntries.isNotEmpty ? 'Save & Next' : 'Save'),
               ),
               if (_ocrEntries.isNotEmpty) ...[

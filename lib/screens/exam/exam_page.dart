@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wordstory/data/models/entry_model.dart';
 import 'package:wordstory/data/models/session_model.dart';
+import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 import 'package:wordstory/services/firestore_service.dart';
 import 'exam_take_page.dart';
@@ -16,6 +17,7 @@ class ExamPage extends StatefulWidget {
 
 class _ExamPageState extends State<ExamPage> {
   final Set<String> _selectedSessionIds = {};
+  final SessionRepository _sessionRepository = SessionRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -87,10 +89,9 @@ class _ExamPageState extends State<ExamPage> {
                 : () async {
                     // Fetch all entries for selected sessions
                     final user = Provider.of<AppAuthProvider>(context, listen: false).user;
-                    final firestoreService = FirestoreService();
                     final List<Entry> allEntries = [];
                     for (final sessionId in _selectedSessionIds) {
-                      final entries = await firestoreService.getEntries(user!.uid, sessionId);
+                      final entries = await _sessionRepository.getEntries(user!.uid, sessionId);
                       allEntries.addAll(entries.where((e) => e.type == EntryType.word));
                     }
                     if (allEntries.isEmpty) {

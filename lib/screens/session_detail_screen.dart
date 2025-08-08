@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 import '../data/models/entry_model.dart';
 import '../services/firestore_service.dart';
@@ -21,8 +22,9 @@ class SessionDetailScreen extends StatefulWidget {
 
 class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTickerProviderStateMixin {
   int _currentTab = 0;
-  Set<String> _selectedEntryIds = {}; // Store IDs of selected entries
+  final Set<String> _selectedEntryIds = {}; // Store IDs of selected entries
   bool get _isSelectionMode => _selectedEntryIds.isNotEmpty;
+  SessionRepository _sessionRepository = SessionRepository();
 
   late TabController _tabController;
 
@@ -50,11 +52,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AppAuthProvider>().user;
-    if (user == null) {
-      return const Scaffold(body: Center(child: Text('Not authenticated')));
-    }
-    final firestoreService = FirestoreService();
+    // final user = context.watch<AppAuthProvider>().user;
+    // if (user == null) {
+    //   return const Scaffold(body: Center(child: Text('Not authenticated')));
+    // }
+
+
 
     return Scaffold(
       appBar: AppBar(
@@ -88,7 +91,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                 );
                 if (confirm == true) {
                   for (final entryId in _selectedEntryIds) {
-                    await firestoreService.deleteEntry(user.uid, widget.session.id, entryId);
+                    await _sessionRepository.deleteEntry(widget.session.userId, widget.session.id, entryId);
                   }
                   setState(() => _selectedEntryIds.clear());
                 }
@@ -97,7 +100,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
         ],
       ),
       body: StreamBuilder<List<Entry>>(
-        stream: firestoreService.watchEntries(user.uid, widget.session.id),
+        stream: _sessionRepository.watchEntries(widget.session.userId, widget.session.id),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -109,9 +112,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
           return TabBarView(
             controller: _tabController,
             children: [
-              _buildEntriesList(context, user.uid, widget.session.id, words),
-              _buildEntriesList(context, user.uid, widget.session.id, idioms),
-              _buildEntriesList(context, user.uid, widget.session.id, phrasals),
+              _buildEntriesList(context, widget.session.userId, widget.session.id, words),
+              _buildEntriesList(context, widget.session.userId, widget.session.id, idioms),
+              _buildEntriesList(context, widget.session.userId, widget.session.id, phrasals),
             ],
           );
         },
@@ -138,7 +141,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
   }
 
   Widget _buildEntriesList(BuildContext context, String uid, String sessionId, List<Entry> entries) {
-    final service = FirestoreService();
+    // final service = FirestoreService();
     if (entries.isEmpty) {
       return Center(
         child: Text('No entries yet. Tap the + button to add.'),
@@ -226,7 +229,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                             ),
                           );
                         } else if (value == 'delete') {
-                          await service.deleteEntry(uid, sessionId, entry.id);
+                          await _sessionRepository.deleteEntry(uid, sessionId, entry.id);
                         }
                       },
                       itemBuilder: (context) => const [

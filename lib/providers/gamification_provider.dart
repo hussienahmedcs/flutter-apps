@@ -38,24 +38,7 @@
 //     notifyListeners();
 //   }
 
-//   /// Award XP to the user and update the level accordingly.  This
-//   /// method automatically calculates the new level (every 500 XP).
-//   Future<void> addXp(int amount) async {
-//     if (_stats == null || _uid == null) return;
-//     int newXp = _stats!.xp + amount;
-//     int newLevel = 1 + (newXp ~/ 500);
-//     _stats = Gamification(
-//       id: _stats!.id,
-//       userId: _uid!,
-//       xp: newXp,
-//       level: newLevel,
-//       streak: _stats!.streak,
-//       lastLogin: _stats!.lastLogin,
-//       achievements: _stats!.achievements,
-//     );
-//     await _db.updateGamification(_uid!, _stats!);
-//     notifyListeners();
-//   }
+
 
 //   /// Increment the streak if the user has logged in today.  If the
 //   /// last login date was yesterday, the streak increments; if it was

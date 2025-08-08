@@ -4,6 +4,7 @@ import 'package:wordstory/data/models/center_config.dart';
 import 'package:wordstory/data/models/gamification_model.dart';
 import 'package:wordstory/data/models/session_model.dart';
 import 'package:wordstory/data/models/story_model.dart';
+import 'package:wordstory/data/repositories/gamification_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 import 'package:wordstory/screens/admin/manage_center_page.dart';
 import 'package:wordstory/screens/center_details_page.dart';
@@ -33,12 +34,25 @@ class _HomePageState extends State<HomePage> {
   final List<Story> stories = [];
   final List<Session> sessions = []; //context.watch<SessionProvider>().sessions;
   Gamification? gamification;
+  final GamificationRepository _gamificationRepository = GamificationRepository();
+  @override
+  void initState() {
+    super.initState();
+    _loadGamification();
+  }
+
+  Future<void> _loadGamification() async {
+    final user = context.read<AppAuthProvider>().user!;
+    final data = await _gamificationRepository.getGamification(user.uid);
+    setState(() {
+      gamification = data;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     // print('>>>>>>>>>>>>>>>>>>>>>');
     final user = context.watch<AppAuthProvider>().user!;
-
     return Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
