@@ -54,7 +54,7 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
     });
     final user = Provider.of<AppAuthProvider>(context, listen: false).user!;
 
-    if (user.isUser) sessionOwnersIds.add(user.uid);
+    // if (user.isUser) sessionOwnersIds.add(user.uid);
     if (user.isLearner && user.centerCode != null) {
       config = await _centerRepository.getCenterConfig(user.centerCode!);
       if (config != null && config!.shareSessionsWithLearners) {
@@ -62,6 +62,8 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
         final centerInfo = await _centerRepository.getCenter(user.centerCode!);
         if (centerInfo != null) sessionOwnersIds.add(centerInfo.admin);
       }
+    } else {
+      sessionOwnersIds.add(user.uid);// user/ admin/ instructor/ or event learner with no center code
     }
     final sessionsList = await _sessionRepository.getSessions(sessionOwnersIds, user.uid);
     setState(() {
