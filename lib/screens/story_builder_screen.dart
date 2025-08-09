@@ -10,7 +10,7 @@ import '../services/gemini_ocr_service.dart'; // Your Gemini/GPT AI service
 
 class StoryBuilderScreen extends StatefulWidget {
   final String? editStoryId;
-  const StoryBuilderScreen({Key? key, this.editStoryId}) : super(key: key);
+  const StoryBuilderScreen({super.key, this.editStoryId});
 
   @override
   State<StoryBuilderScreen> createState() => _StoryBuilderScreenState();

@@ -1,19 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/story_provider.dart';
+import 'package:wordstory/data/interfaces/user_interface.dart';
+import 'package:wordstory/data/models/story_model.dart';
+import 'package:wordstory/data/repositories/story_repository.dart';
 import 'story_builder_screen.dart';
 
 /// Displays all of the user's saved stories.  Tapping on a story
 /// navigates to the editor for updating its content.  Long pressing
 /// reveals options to delete the story or export it (the latter is
 /// currently a stub).  Stories are loaded from the [StoryProvider].
-class MyStoriesScreen extends StatelessWidget {
-  const MyStoriesScreen({Key? key}) : super(key: key);
+class MyStoriesScreen extends StatefulWidget {
+  final UserInterface user;
+  const MyStoriesScreen({super.key, required this.user});
+
+  @override
+  State<MyStoriesScreen> createState() => _MyStoriesScreenState();
+}
+
+class _MyStoriesScreenState extends State<MyStoriesScreen> {
+  final StoryRepository _storyRepository = StoryRepository();
+  List<Story> stories = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loader();
+  }
+
+  Future<void> loader() async {
+    setState(() {
+      _loading = true;
+    });
+    final stories = await _storyRepository.getStories(widget.user.uid);
+    setState(() {
+      this.stories = stories;
+      _loading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    // final stories = context.watch<StoryProvider>().stories;
-    final stories = null;
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Stories'),
@@ -47,8 +76,7 @@ class MyStoriesScreen extends StatelessWidget {
                     trailing: PopupMenuButton<String>(
                       onSelected: (value) async {
                         if (value == 'delete') {
-                          // final provider = context.read<StoryProvider>();
-                          // await provider.deleteStory(story.id);
+                          await _storyRepository.deleteStory(widget.user.uid, story.id);
                         } else if (value == 'export') {
                           ScaffoldMessenger.of(context)
                               .showSnackBar(const SnackBar(content: Text('Export not implemented.')));
@@ -63,6 +91,7 @@ class MyStoriesScreen extends StatelessWidget {
                 );
               },
             ),
+      floatingActionButton: null,//add button to click to create story
     );
   }
 }

@@ -68,13 +68,6 @@ class FirestoreService {
   //   });
   // }
 
-  // /// Listen to stories created by the user ordered by newest first.
-  // Stream<List<Story>> watchStories(String uid) {
-  //   return _storiesRef(uid)
-  //       .orderBy('created_at', descending: true)
-  //       .snapshots()
-  //       .map((snapshot) => snapshot.docs.map((doc) => Story.fromMap(doc.id, doc.data())).toList());
-  // }
 
   // /// Add or update a story.  Returns the document ID.
   // Future<String> upsertStory(String uid, Story story) async {

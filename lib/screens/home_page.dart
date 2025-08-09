@@ -129,7 +129,7 @@ class _HomePageState extends State<HomePage> {
                   'icon': Icons.library_books,
                   'label': 'Stories',
                   'onTap': () {
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyStoriesScreen()));
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => MyStoriesScreen(user: user)));
                   },
                   'enabled':
                       user.isUser || user.isAdmin || user.isLearner || user.isPendingLearner || user.isInstructor,
