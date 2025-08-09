@@ -50,6 +50,7 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
 
   Future<void> loader() async {
     setState(() {
+       _loading = true;
       sessions = [];
     });
     final user = Provider.of<AppAuthProvider>(context, listen: false).user!;
