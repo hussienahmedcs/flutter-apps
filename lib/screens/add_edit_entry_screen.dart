@@ -200,7 +200,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
     Navigator.of(context, rootNavigator: true).pop();
   }
 
-  void _saveAll() async {
+  void _saveAll(UserInterface user) async {
     if (_ocrEntries.isEmpty) return;
 
     _showSavingDialog(); // Show loader
@@ -210,7 +210,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
 
       final service = FirestoreService();
       // final gamification = Provider.of<GamificationProvider>(context, listen: false);
-      int totalXp = 0;
+      // int totalXp = 0;
 
       for (final entry in _ocrEntries) {
         final newEntry = Entry(
@@ -224,8 +224,8 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
           difficulty: _difficulty,
           addedAt: DateTime.now(),
         );
-        // await service.upsertEntry(uid, widget.sessionId, newEntry);
-        totalXp += newEntry.type == EntryType.word ? 10 : 20;
+        await _sessionRepository.upsertEntry(user.uid, widget.sessionId, newEntry);
+        // totalXp += newEntry.type == EntryType.word ? 10 : 20;
       }
 
       // gamification.addXp(totalXp);
@@ -357,7 +357,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
                     icon: const Icon(Icons.save_alt),
                     label: const Text('Save All Scanned Entries'),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                    onPressed: _saveAll,
+                    onPressed: () => _saveAll(user),
                   ),
                 ),
                 const SizedBox(height: 32),
