@@ -10,6 +10,8 @@ import 'package:wordstory/data/repositories/center_repository.dart';
 import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 import '../data/models/entry_model.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:flip_card/flip_card_controller.dart';
 
 class FlashcardsScreen extends StatefulWidget {
   const FlashcardsScreen({super.key});
@@ -32,6 +34,12 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
   bool showNextBtn = false;
   Gamification? gamification;
   final SessionRepository _sessionRepository = SessionRepository();
+  final stt.SpeechToText _stt = stt.SpeechToText();
+  bool _sttAvailable = false;
+  bool _isListening = false;
+  double _lastConfidence = 0.0;
+  // if you have one card visible at a time:
+  final flipController = FlipCardController();
 
   void reset() {
     if (!mounted) return;
@@ -46,6 +54,101 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
     super.initState();
     role = Role.user;
     _loadSessions();
+    _initSpeech();
+  }
+
+  Future<void> _initSpeech() async {
+    _sttAvailable = await _stt.initialize(
+      onStatus: (s) {
+        if (s == 'notListening' && mounted) {
+          // Auto-restart for continuous commands
+          if (_isListening) _startListening();
+        }
+      },
+      onError: (e) {
+        // You can show a SnackBar if helpful
+        // debugPrint('STT error: $e');
+      },
+    );
+    setState(() {});
+  }
+
+  void _startListening() {
+    if (!_sttAvailable) return;
+    _isListening = true;
+    _stt.listen(
+      listenMode: stt.ListenMode.confirmation, // low-latency commands
+      partialResults: true,
+      onResult: (res) {
+        final text = res.recognizedWords.toLowerCase().trim();
+        _lastConfidence = res.hasConfidenceRating ? res.confidence : 0.0;
+        if (text.isNotEmpty) _handleCommand(text);
+      },
+      // Pick your locale; try 'en_US' or 'ar_AE' etc.
+      // localeId: 'en_US',
+    );
+    setState(() {});
+  }
+
+  void _stopListening() async {
+    _isListening = false;
+    await _stt.stop();
+    setState(() {});
+  }
+
+  void _handleCommand(String text) {
+    // Normalize tiny ASR mishears
+    final clean = text
+        .replaceAll(RegExp(r'\bprev\b'), 'previous')
+        .replaceAll('back', 'previous')
+        .replaceAll('flip card', 'flip')
+        .replaceAll('sweep', 'flip') // common mishear
+        .replaceAll('swipe', 'flip')
+        .replaceAll('next one', 'next')
+        // Arabic quick mappings (expand if you like)
+        .replaceAll('التالي', 'next')
+        .replaceAll('اللي بعده', 'next')
+        .replaceAll('السابق', 'previous')
+        .replaceAll('ارجع', 'previous')
+        .replaceAll('اقلب', 'flip')
+        .trim();
+
+    // Confidence gate (optional)
+    if (_lastConfidence < 0.40 && !_stt.isListening) return;
+
+    if (RegExp(r'\b(next|التالي|اللي بعده)\b').hasMatch(clean)) {
+      _goNext();
+      _softAcknowledge(); // optional haptic/snack
+    } else if (RegExp(r'\b(previous|prev|back|السابق|ارجع)\b').hasMatch(clean)) {
+      _goPrevious();
+      _softAcknowledge();
+    } else if (RegExp(r'\b(flip|اقلب)\b').hasMatch(clean)) {
+      _flipCard();
+      _softAcknowledge();
+    }
+  }
+
+  void _goNext() {
+    if (_currentIndex < _entries.length - 1) {
+      setState(() => _currentIndex++);
+    }
+    // If you’re using a PageView, call pageController.nextPage(...)
+  }
+
+  void _goPrevious() {
+    if (_currentIndex > 0) {
+      setState(() => _currentIndex--);
+    }
+    // Or pageController.previousPage(...)
+  }
+
+  void _flipCard() {
+    flipController.toggleCard();
+  }
+
+  void _softAcknowledge() {
+    // Optionally: HapticFeedback.selectionClick();
+    // Or show a tiny SnackBar, or play a short tone with flutter_tts/beep
   }
 
   Future<void> _loadSessions() async {
@@ -157,6 +260,11 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
           final isFinished = _currentIndex >= _entries.length;
           return isFinished ? _buildSummary(context) : _buildCard(context);
         },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+        label: Text(_isListening ? 'Listening…' : 'Voice'),
+        onPressed: () => _isListening ? _stopListening() : _startListening(),
       ),
     );
   }
@@ -299,6 +407,7 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
         Expanded(
           child: Center(
             child: FlipCard(
+              controller: flipController,
               direction: FlipDirection.HORIZONTAL,
               front: _buildFront(entry, difficultyColor),
               back: _buildBack(entry, difficultyColor),
