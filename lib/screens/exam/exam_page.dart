@@ -5,7 +5,7 @@ import 'package:wordstory/data/models/entry_model.dart';
 import 'package:wordstory/data/models/session_model.dart';
 import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
-import 'package:wordstory/services/firestore_service.dart';
+// import 'package:wordstory/services/firestore_service.dart';
 import 'exam_take_page.dart';
 import 'package:intl/intl.dart';
 
@@ -17,7 +17,8 @@ class ExamPage extends StatefulWidget {
 }
 
 class _ExamPageState extends State<ExamPage> {
-  final Set<String> _selectedSessionIds = {};
+  // final Set<String> _selectedSessionIds = {};
+  List<Session> selectedSessions = [];
   final SessionRepository _sessionRepository = SessionRepository();
   UserInterface? user;
   bool _loading = true;
@@ -65,7 +66,8 @@ class _ExamPageState extends State<ExamPage> {
                       itemCount: sessions.length,
                       itemBuilder: (context, index) {
                         final session = sessions[index];
-                        final isSelected = _selectedSessionIds.contains(session.id);
+                        final isSelected = selectedSessions
+                            .any((s) => s.id == session.id); // _selectedSessionIds.contains(session.id);
                         return ListTile(
                           title: Text(session.title),
                           subtitle: Text(
@@ -77,9 +79,11 @@ class _ExamPageState extends State<ExamPage> {
                             onChanged: (checked) {
                               setState(() {
                                 if (checked == true) {
-                                  _selectedSessionIds.add(session.id);
+                                  selectedSessions.add(session);
+                                  // _selectedSessionIds.add(session.id);
                                 } else {
-                                  _selectedSessionIds.remove(session.id);
+                                  selectedSessions = selectedSessions.where((s) => s.id != session.id).toList();
+                                  // _selectedSessionIds.remove(session.id);
                                 }
                               });
                             },
@@ -87,9 +91,11 @@ class _ExamPageState extends State<ExamPage> {
                           onTap: () {
                             setState(() {
                               if (isSelected) {
-                                _selectedSessionIds.remove(session.id);
+                                // _selectedSessionIds.remove(session.id);
+                                selectedSessions = selectedSessions.where((s) => s.id != session.id).toList();
                               } else {
-                                _selectedSessionIds.add(session.id);
+                                selectedSessions.add(session);
+                                // _selectedSessionIds.add(session.id);
                               }
                             });
                           },
@@ -104,15 +110,21 @@ class _ExamPageState extends State<ExamPage> {
           child: ElevatedButton.icon(
             icon: const Icon(Icons.play_arrow),
             label: const Text('Start Exam'),
-            onPressed: _selectedSessionIds.isEmpty
+            onPressed: selectedSessions.isEmpty //_selectedSessionIds.isEmpty
                 ? null
                 : () async {
                     // Fetch all entries for selected sessions
-                    final user = Provider.of<AppAuthProvider>(context, listen: false).user;
+                    // final user = Provider.of<AppAuthProvider>(context, listen: false).user;
                     final List<Entry> allEntries = [];
-                    for (final sessionId in _selectedSessionIds) {
-                      final entries = await _sessionRepository.getEntries(user!.uid, sessionId);
-                      allEntries.addAll(entries.where((e) => e.type == EntryType.word));
+                    for (final session in selectedSessions) {
+                      //_selectedSessionIds
+
+                      if (session.wordEntries.isNotEmpty) {
+                        allEntries.addAll(session.wordEntries);
+                      } else {
+                        final entries = await _sessionRepository.getEntries(session.userId, session.id);
+                        allEntries.addAll(entries.where((e) => e.type == EntryType.word));
+                      }
                     }
                     if (allEntries.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
