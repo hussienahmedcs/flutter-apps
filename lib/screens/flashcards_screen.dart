@@ -40,6 +40,7 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
   double _lastConfidence = 0.0;
   // if you have one card visible at a time:
   final flipController = FlipCardController();
+  final CenterRepository _centerRepository = CenterRepository();
 
   void reset() {
     if (!mounted) return;
@@ -157,10 +158,10 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
 
     List<String> sessionOwnersIds = [];
     CenterConfig? config;
-    CenterRepository _centerRepository = CenterRepository();
+
     if (user.isLearner && user.centerCode != null) {
       config = await _centerRepository.getCenterConfig(user.centerCode!);
-      if (config != null && config!.shareSessionsWithLearners) {
+      if (config != null && config.shareSessionsWithLearners) {
         //get admin id
         final centerInfo = await _centerRepository.getCenter(user.centerCode!);
         if (centerInfo != null) sessionOwnersIds.add(centerInfo.admin);
@@ -303,21 +304,24 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
         }).toList();
 
         if (wrap) {
-          return Column(
-            children: [
-              if (_selectedSessionIds.isNotEmpty)
-                TextButton(
-                  onPressed: _loadEntries,
-                  child: const Text(
-                    "Start",
-                    // style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-                  ),
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SingleChildScrollView(
+                primary: false, // important when nested inside another scroll
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_selectedSessionIds.isNotEmpty) TextButton(onPressed: _loadEntries, child: const Text("Start")),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: chipList,
+                    ),
+                  ],
                 ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Wrap(spacing: 8, runSpacing: 8, children: chipList),
               ),
-            ],
+            ),
           );
         } else {
           return SingleChildScrollView(
@@ -332,15 +336,25 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
 
   /// --- Other states (same as your code) ---
   Widget _buildPromptSelectSessions(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          const Text('Select sessions to review cards.', style: TextStyle(fontSize: 18)),
-          const SizedBox(height: 16),
-          _buildSessionChips(wrap: true),
-        ],
+    return SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text('Select sessions to review cards.', style: TextStyle(fontSize: 18)),
+                  const SizedBox(height: 16),
+                  // Chips below can get tall; keep them within this scroll
+                  _buildSessionChips(wrap: true),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
