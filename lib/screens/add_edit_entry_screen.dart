@@ -216,7 +216,8 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
         final newEntry = Entry(
           id: '', // Let Firestore assign ID
           sessionId: widget.sessionId,
-          type: _type, // Or EntryType.word if you want fixed type
+          type: EntryType.values
+              .firstWhere((e) => e.name == entry.type, orElse: () => _type), // Or EntryType.word if you want fixed type
           content: entry.word,
           meaning: entry.meaning,
           pronounce: entry.pronounce,

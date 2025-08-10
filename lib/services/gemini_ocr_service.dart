@@ -43,20 +43,60 @@ class GeminiOcrService {
       final imageBytes = await imageFile.readAsBytes();
       final base64Image = base64Encode(imageBytes);
 
+      // final payload = {
+      //   "contents": [
+      //     {
+      //       "parts": [
+      //         {
+      //           "text":
+      //               "Extract all English words (or phrases) found in this image. For each, reply as a JSON list with these fields: word, pronounce (the phonetic pronunciation, in UK English, e.g., \"obvious\" => \"ob-vee-uhs\"), meaning (in simple English), example (a clear sentence). Example format: [{\"word\": \"obvious\", \"pronounce\": \"ob-vee-uhs\", \"meaning\": \"easily understood or seen\", \"example\": \"It was obvious he was happy.\"}]"
+      //         },
+      //         {
+      //           "inlineData": {"mimeType": "image/jpeg", "data": base64Image}
+      //         }
+      //       ]
+      //     }
+      //   ]
+      // };
+
       final payload = {
+        "systemInstruction": {
+          "parts": [
+            {
+              "text":
+                  "You are an OCR+lexical extractor. Detect English words and multi-word expressions (MWEs) such as phrasal verbs (verb + particle: 'look up', 'break down') and idioms ('a piece of cake', 'under the weather'). Treat MWEs as single items. Do not split them into separate words."
+            }
+          ]
+        },
         "contents": [
           {
             "parts": [
               {
                 "text":
-                    "Extract all English words (or phrases) found in this image. For each, reply as a JSON list with these fields: word, pronounce (the phonetic pronunciation, in UK English, e.g., \"obvious\" => \"ob-vee-uhs\"), meaning (in simple English), example (a clear sentence). Example format: [{\"word\": \"obvious\", \"pronounce\": \"ob-vee-uhs\", \"meaning\": \"easily understood or seen\", \"example\": \"It was obvious he was happy.\"}]"
+                    "Read the image and return ONLY JSON (no prose). Schema: an array of items with fields: word (string), type ('word'|'phrasal'|'idiom'), pronounce (UK phonetics, e.g., \"obvious\" => \"ob-vee-uhs\")), meaning (simple English), example (clear sentence), confidence (0..1, optional). If an expression is clearly an idiom, set type='idiom'. For verb + particle forms, set type='phrasal'. Do not include duplicates."
               },
               {
                 "inlineData": {"mimeType": "image/jpeg", "data": base64Image}
               }
             ]
           }
-        ]
+        ],
+        "generationConfig": {"response_mime_type": "application/json", "temperature": 0.2, "topP": 0.8},
+        // "response_schema": {
+        //   "type": "ARRAY",
+        //   "items": {
+        //     "type": "OBJECT",
+        //     "properties": {
+        //       "word": {"type": "STRING"},
+        //       "type": {"type": "STRING"},
+        //       "pronounce": {"type": "STRING"},
+        //       "meaning": {"type": "STRING"},
+        //       "example": {"type": "STRING"},
+        //       "confidence": {"type": "NUMBER"}
+        //     },
+        //     "required": ["word", "type", "meaning", "example"]
+        //   }
+        // }
       };
 
       final response = await http.post(
@@ -70,6 +110,7 @@ class GeminiOcrService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        // print(data);
         final candidates = data['candidates'] as List?;
         if (candidates != null && candidates.isNotEmpty) {
           final text = candidates[0]['content']['parts'][0]['text'];
@@ -84,6 +125,8 @@ class GeminiOcrService {
             return lst;
           }
         }
+      } else {
+        print('Gemini error ${response.statusCode}: ${response.body}');
       }
       return [];
     } catch (e) {

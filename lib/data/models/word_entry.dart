@@ -3,13 +3,9 @@ class WordEntry {
   String pronounce;
   String meaning;
   String example;
+  String? type;
 
-  WordEntry({
-    required this.word,
-    required this.pronounce,
-    required this.meaning,
-    required this.example,
-  });
+  WordEntry({required this.word, required this.pronounce, required this.meaning, required this.example, this.type});
 
   // From JSON map (e.g., from Gemini OCR)
   factory WordEntry.fromJson(Map<String, dynamic> json) => WordEntry(
@@ -17,6 +13,7 @@ class WordEntry {
         pronounce: json['pronounce'] ?? '',
         meaning: json['meaning'] ?? '',
         example: json['example'] ?? '',
+        type: json['type'] ?? 'word',
       );
 
   // To JSON (if needed)
@@ -25,6 +22,7 @@ class WordEntry {
         'pronounce': pronounce,
         'meaning': meaning,
         'example': example,
+        'type': type ?? 'word',
       };
 
   // For form editing (can be helpful for controllers, etc.)
@@ -33,12 +31,14 @@ class WordEntry {
     String? pronounce,
     String? meaning,
     String? example,
+    String? type,
   }) {
     return WordEntry(
       word: word ?? this.word,
       pronounce: pronounce ?? this.pronounce,
       meaning: meaning ?? this.meaning,
       example: example ?? this.example,
+      type: type ?? this.type ?? 'word',
     );
   }
 }
