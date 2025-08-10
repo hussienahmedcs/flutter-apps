@@ -30,7 +30,7 @@ class SessionsListScreen extends StatefulWidget {
 class _SessionsListScreenState extends State<SessionsListScreen> {
   final CenterRepository _centerRepository = CenterRepository();
   final SessionRepository _sessionRepository = SessionRepository();
-  final List<String?> sessionOwnersIds = [];
+  List<String?> sessionOwnersIds = [];
   List<Session> sessions = [];
   bool _loading = true;
   CenterConfig? config;
@@ -50,22 +50,11 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
 
   Future<void> loader() async {
     setState(() {
-       _loading = true;
+      _loading = true;
       sessions = [];
     });
     final user = Provider.of<AppAuthProvider>(context, listen: false).user!;
-
-    // if (user.isUser) sessionOwnersIds.add(user.uid);
-    if (user.isLearner && user.centerCode != null) {
-      config = await _centerRepository.getCenterConfig(user.centerCode!);
-      if (config != null && config!.shareSessionsWithLearners) {
-        //get admin id
-        final centerInfo = await _centerRepository.getCenter(user.centerCode!);
-        if (centerInfo != null) sessionOwnersIds.add(centerInfo.admin);
-      }
-    } else {
-      sessionOwnersIds.add(user.uid); // user/ admin/ instructor/ or event learner with no center code
-    }
+    sessionOwnersIds = await _sessionRepository.getSessionOwnersIds(user);
     final sessionsList = await _sessionRepository.getSessions(sessionOwnersIds, user.uid);
     setState(() {
       sessions.addAll(sessionsList);

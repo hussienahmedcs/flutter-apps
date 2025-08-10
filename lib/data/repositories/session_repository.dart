@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:wordstory/data/interfaces/user_interface.dart';
 import 'package:wordstory/data/models/entry_model.dart';
 import 'package:wordstory/data/models/session_model.dart';
+import 'package:wordstory/data/repositories/center_repository.dart';
 import 'package:wordstory/services/firestore_service.dart';
 
 class SessionRepository {
   FirestoreService db = FirestoreService();
+  final CenterRepository _centerRepository = CenterRepository();
 
   Future<List<Session>> getSessions(List<String?> uidList, String userId) async {
     List<Session> sessions = [];
@@ -97,5 +100,53 @@ class SessionRepository {
   /// document will be created.  Returns the ID of the saved session.
   Future<String> saveSession(Session session) async {
     return upsertSession(session.userId, session);
+  }
+
+  Stream<List<Session>> watchSessions(List<String> userIds) {
+    
+    // 1) Fast‑fail for empty lists
+    if (userIds.isEmpty) return Stream.value(const []);
+
+    // 2) Firestore whereIn supports max 10 values; trim or chunk as needed
+    final ids = userIds.length > 10 ? userIds.sublist(0, 10) : userIds;
+
+    final query = db.sessionsRef().where('user_id', whereIn: ids).orderBy('date', descending: true);
+
+    // 3) Use asyncMap so we can await per‑document work
+    return query.snapshots().asyncMap((snapshot) async {
+      final sessions = await Future.wait(snapshot.docs.map((doc) async {
+        final data = doc.data();
+
+        // Defensive types
+        final userId = (data['user_id'] ?? '') as String;
+
+        // Get word entries asynchronously
+        final words = await getEntries(userId, doc.id);
+
+        // Build the model with the enriched field
+        return Session.fromMap(doc.id, {
+          ...data,
+          'word_entries': words,
+        });
+      }));
+
+      return sessions;
+    });
+  }
+
+  Future<List<String>> getSessionOwnersIds(UserInterface user) async {
+    List<String> sessionOwnersIds = [];
+
+    if (user.isLearner && user.centerCode != null) {
+      var config = await _centerRepository.getCenterConfig(user.centerCode!);
+      if (config != null && config.shareSessionsWithLearners) {
+        //get admin id
+        final centerInfo = await _centerRepository.getCenter(user.centerCode!);
+        if (centerInfo != null) sessionOwnersIds.add(centerInfo.admin);
+      }
+    } else {
+      sessionOwnersIds.add(user.uid); // user/ admin/ instructor/ or event learner with no center code
+    }
+    return sessionOwnersIds;
   }
 }

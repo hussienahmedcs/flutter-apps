@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:wordstory/data/models/entry_model.dart';
+import 'package:wordstory/data/models/word_entry.dart';
 
 /// Represents a vocabulary session created by the user.  A session
 /// groups together words, idioms and phrasal verbs entered on a
@@ -12,6 +14,7 @@ class Session {
   final DateTime date;
   final String? notes;
   final DateTime createdAt;
+  final List<Entry> wordEntries;
 
   Session({
     required this.id,
@@ -21,6 +24,7 @@ class Session {
     required this.date,
     this.notes,
     required this.createdAt,
+    this.wordEntries = const [],
   });
 
   factory Session.fromMap(String id, Map<String, dynamic> data) {
@@ -32,6 +36,7 @@ class Session {
       date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
       notes: data['notes'] as String?,
       createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      wordEntries: data['word_entries'] ?? const [],
     );
   }
 
