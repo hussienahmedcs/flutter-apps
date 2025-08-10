@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:wordstory/data/models/word_entry.dart';
+import 'package:wordstory/data/models/entry_model.dart';
 
 class GeminiOcrService {
   static const String apiKey = "AIzaSyCi0nEKnCBqTUd_i39pJBy2qm_EaaLdO7A";
@@ -36,8 +36,8 @@ class GeminiOcrService {
     Navigator.of(context, rootNavigator: true).pop();
   }
 
-  /// Returns a list of WordEntry models for each word/phrase found in the image.
-  Future<List<WordEntry>> extractWordsFromImage(File imageFile) async {
+  /// Returns a list of Entry models for each word/phrase found in the image.
+  Future<List<Entry>> extractWordsFromImage(File imageFile) async {
     _showLoading("Processing image...");
     try {
       final imageBytes = await imageFile.readAsBytes();
@@ -73,7 +73,7 @@ class GeminiOcrService {
             "parts": [
               {
                 "text":
-                    "Read the image and return ONLY JSON (no prose). Schema: an array of items with fields: word (string), type ('word'|'phrasal'|'idiom'), pronounce (UK phonetics, e.g., \"obvious\" => \"ob-vee-uhs\")), meaning (simple English), example (clear sentence), confidence (0..1, optional). If an expression is clearly an idiom, set type='idiom'. For verb + particle forms, set type='phrasal'. Do not include duplicates."
+                    "Read the image and return ONLY JSON (no prose). Schema: an array of items with fields: content (string), type ('word'|'phrasal'|'idiom'), pronounce (UK phonetics, e.g., \"obvious\" => \"ob-vee-uhs\")), meaning (simple English), example (clear sentence), confidence (0..1, optional). If an expression is clearly an idiom, set type='idiom'. For verb + particle forms, set type='phrasal'. Do not include duplicates."
               },
               {
                 "inlineData": {"mimeType": "image/jpeg", "data": base64Image}
@@ -87,14 +87,14 @@ class GeminiOcrService {
         //   "items": {
         //     "type": "OBJECT",
         //     "properties": {
-        //       "word": {"type": "STRING"},
+        //       "content": {"type": "STRING"},
         //       "type": {"type": "STRING"},
         //       "pronounce": {"type": "STRING"},
         //       "meaning": {"type": "STRING"},
         //       "example": {"type": "STRING"},
         //       "confidence": {"type": "NUMBER"}
         //     },
-        //     "required": ["word", "type", "meaning", "example"]
+        //     "required": ["content", "type", "meaning", "example"]
         //   }
         // }
       };
@@ -120,8 +120,8 @@ class GeminiOcrService {
           if (jsonStart != -1 && jsonEnd != -1 && jsonEnd > jsonStart) {
             final jsonString = text.substring(jsonStart, jsonEnd + 1);
             final List<dynamic> decoded = jsonDecode(jsonString);
-            List<WordEntry> lst = decoded.map((item) => WordEntry.fromJson(item as Map<String, dynamic>)).toList();
-            // print(lst.first.word);
+            List<Entry> lst = decoded.map((item) => Entry.fromJson(item as Map<String, dynamic>)).toList();
+            // print(lst.first.content);
             return lst;
           }
         }

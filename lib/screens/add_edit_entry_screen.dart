@@ -41,7 +41,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
   // final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   bool _isScanning = false;
-  List<WordEntry> _ocrEntries = [];
+  List<Entry> _ocrEntries = [];
   final SessionRepository _sessionRepository = SessionRepository();
   final GamificationRepository _gamificationRepository = GamificationRepository();
 
@@ -102,7 +102,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
       setState(() => _isScanning = true);
 
       final ocrService = GeminiOcrService(context: context);
-      final List<WordEntry> entries = await ocrService.extractWordsFromImage(File(picked.path));
+      final List<Entry> entries = await ocrService.extractWordsFromImage(File(picked.path));
 
       setState(() {
         _isScanning = false;
@@ -218,7 +218,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
           sessionId: widget.sessionId,
           type: EntryType.values
               .firstWhere((e) => e.name == entry.type, orElse: () => _type), // Or EntryType.word if you want fixed type
-          content: entry.word,
+          content: entry.content,
           meaning: entry.meaning,
           pronounce: entry.pronounce,
           example: entry.example,
@@ -379,7 +379,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
                         title: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(entry.word, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text(entry.content, style: const TextStyle(fontWeight: FontWeight.bold)),
                             if (entry.pronounce.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 2),
@@ -413,7 +413,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
                               tooltip: "Use",
                               onPressed: () {
                                 setState(() {
-                                  _contentController.text = entry.word;
+                                  _contentController.text = entry.content;
                                   _meaningController.text = entry.meaning;
                                   _pronounceController.text = entry.pronounce;
                                   _exampleController.text = entry.example;

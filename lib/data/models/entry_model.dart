@@ -70,4 +70,17 @@ class Entry {
       'added_at': Timestamp.fromDate(addedAt),
     };
   }
+
+  // From JSON map (e.g., from Gemini OCR)
+  factory Entry.fromJson(Map<String, dynamic> json) => Entry(
+        content: json['content'] ?? '',
+        pronounce: json['pronounce'] ?? '',
+        meaning: json['meaning'] ?? '',
+        example: json['example'] ?? '',
+        type: EntryType.values.firstWhere((t) => t.name == json['type'], orElse: () => EntryType.word),
+        id: '',
+        sessionId: '',
+        difficulty: Difficulty.easy,
+        addedAt: DateTime.now(),
+      );
 }

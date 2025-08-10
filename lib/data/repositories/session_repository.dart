@@ -103,7 +103,6 @@ class SessionRepository {
   }
 
   Stream<List<Session>> watchSessions(List<String> userIds) {
-    
     // 1) Fast‑fail for empty lists
     if (userIds.isEmpty) return Stream.value(const []);
 
@@ -144,9 +143,10 @@ class SessionRepository {
         final centerInfo = await _centerRepository.getCenter(user.centerCode!);
         if (centerInfo != null) sessionOwnersIds.add(centerInfo.admin);
       }
-    } else {
-      sessionOwnersIds.add(user.uid); // user/ admin/ instructor/ or event learner with no center code
     }
+    // else {
+    sessionOwnersIds.add(user.uid); // user/ admin/ instructor/ or event learner with no center code
+    // }
     return sessionOwnersIds;
   }
 }
