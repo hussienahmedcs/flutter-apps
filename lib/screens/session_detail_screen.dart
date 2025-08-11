@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wordstory/data/repositories/session_repository.dart';
+import 'package:wordstory/services/firestore_service.dart';
 import '../data/models/entry_model.dart';
 import 'add_edit_entry_screen.dart';
 import '../data/models/session_model.dart';
@@ -21,8 +21,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
   int _currentTab = 0;
   final Set<String> _selectedEntryIds = {}; // Store IDs of selected entries
   bool get _isSelectionMode => _selectedEntryIds.isNotEmpty;
-  final SessionRepository _sessionRepository = SessionRepository();
-
   late TabController _tabController;
 
   @override
@@ -53,8 +51,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
     // if (user == null) {
     //   return const Scaffold(body: Center(child: Text('Not authenticated')));
     // }
-
-
+    final firestoreService = FirestoreService();
 
     return Scaffold(
       appBar: AppBar(
@@ -88,7 +85,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                 );
                 if (confirm == true) {
                   for (final entryId in _selectedEntryIds) {
-                    await _sessionRepository.deleteEntry(widget.session.userId, widget.session.id, entryId);
+                    await FirestoreService().deleteEntry(widget.session.userId, widget.session.id, entryId);
                   }
                   setState(() => _selectedEntryIds.clear());
                 }
@@ -97,7 +94,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
         ],
       ),
       body: StreamBuilder<List<Entry>>(
-        stream: _sessionRepository.watchEntries(widget.session.userId, widget.session.id),
+        stream: firestoreService.watchEntries(widget.session.userId, widget.session.id),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -225,9 +222,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                               builder: (_) => AddEditEntryScreen(sessionId: sessionId, entry: entry),
                             ),
                           );
-                          
                         } else if (value == 'delete') {
-                          await _sessionRepository.deleteEntry(uid, sessionId, entry.id);
+                          await FirestoreService().deleteEntry(uid, sessionId, entry.id);
                         }
                       },
                       itemBuilder: (context) => const [

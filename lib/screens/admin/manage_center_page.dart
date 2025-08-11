@@ -1,13 +1,14 @@
 import 'dart:io';
 import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:wordstory/data/models/center.dart';
 import 'package:wordstory/data/models/center_request.dart';
 import 'package:wordstory/screens/admin/center_config_admin_page.dart';
+import 'package:wordstory/services/firestore_service.dart';
 
 class ManageCenterPage extends StatefulWidget {
   final String centerCode;
@@ -24,6 +25,7 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
   // String centerCode = '';
   XFile? _pickedImage;
   bool _loading = false;
+  final FirestoreService db = FirestoreService();
 
   @override
   void initState() {
@@ -32,7 +34,7 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
   }
 
   Future<void> loadCenterInfo() async {
-    var doc = await FirebaseFirestore.instance.collection('centers').doc(widget.centerCode).get();
+    var doc = await db.centerRef(widget.centerCode).get();
     var data = doc.data()!;
     setState(() {
       logoUrl = data['logoUrl'] ?? '';
@@ -51,7 +53,7 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
   void saveCenterConfig() async {
     setState(() => _loading = true);
     if (_pickedImage != null) await uploadLogo();
-    await FirebaseFirestore.instance.collection('centers').doc(widget.centerCode).update({
+    await db.centerRef(widget.centerCode).update({
       'logoUrl': logoUrl,
       'code': widget.centerCode,
     });
@@ -103,15 +105,17 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
           trailing: IconButton(
             icon: const Icon(Icons.check),
             onPressed: () async {
-              final docRef = FirebaseFirestore.instance.collection('centers').doc(widget.centerCode);
-
               final roleField = role == Role.learner ? 'learners' : 'teachers';
 
-              await docRef.update({
+              await db.centerRef(widget.centerCode).update({
                 roleField: FieldValue.arrayUnion([req['requesterId']])
               });
 
-              await docRef.collection('requests').doc(req.id).update({'status': RequestStatus.approved.name});
+              await db
+                  .centerRef(widget.centerCode)
+                  .collection('requests')
+                  .doc(req.id)
+                  .update({'status': RequestStatus.approved.name});
 
               setState(() {});
             },
@@ -123,7 +127,7 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isInvalid = widget.centerCode == null || widget.centerCode.trim().isEmpty;
+    final isInvalid = widget.centerCode.trim().isEmpty;
     if (isInvalid) {
       return Scaffold(
         appBar: AppBar(title: const Text('Center')),
@@ -193,9 +197,8 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
               ),
               const SizedBox(height: 24),
               StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('centers')
-                    .doc(widget.centerCode)
+                stream: db
+                    .centerRef(widget.centerCode)
                     .collection('requests')
                     .where('centerCode', isEqualTo: widget.centerCode)
                     .where('requesterRole', whereIn: [Role.learner.name, Role.instructor.name])
@@ -217,10 +220,7 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
                   final requesterIds = requests.map((d) => d['requesterId']).toList();
 
                   return FutureBuilder<QuerySnapshot>(
-                    future: FirebaseFirestore.instance
-                        .collection('users')
-                        .where(FieldPath.documentId, whereIn: requesterIds)
-                        .get(),
+                    future: db.usersRef().where(FieldPath.documentId, whereIn: requesterIds).get(),
                     builder: (context, usersSnap) {
                       if (usersSnap.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -250,7 +250,7 @@ class _ManageCenterPageState extends State<ManageCenterPage> {
               ),
               const SizedBox(height: 24),
               StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseFirestore.instance.collection('centers').doc(widget.centerCode).snapshots(),
+                stream: db.centerRef(widget.centerCode).snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());

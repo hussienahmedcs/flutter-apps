@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:wordstory/data/interfaces/user_interface.dart';
 import 'package:wordstory/data/models/entry_model.dart';
 import 'package:wordstory/data/models/session_model.dart';
-import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
+// import 'package:wordstory/providers/session_provider.dart';
+import 'package:wordstory/services/firestore_service.dart';
 // import 'package:wordstory/services/firestore_service.dart';
 import 'exam_take_page.dart';
 import 'package:intl/intl.dart';
@@ -19,7 +20,6 @@ class ExamPage extends StatefulWidget {
 class _ExamPageState extends State<ExamPage> {
   // final Set<String> _selectedSessionIds = {};
   List<Session> selectedSessions = [];
-  final SessionRepository _sessionRepository = SessionRepository();
   UserInterface? user;
   bool _loading = true;
   List<String>? ids;
@@ -34,7 +34,7 @@ class _ExamPageState extends State<ExamPage> {
   Future<void> loader() async {
     user = Provider.of<AppAuthProvider>(context, listen: false).user;
     if (user != null) {
-      ids = await _sessionRepository.getSessionOwnersIds(user!);
+      ids = await FirestoreService().getSessionOwnersIds(user!);
     }
     // final firestoreService = FirestoreService();
     setState(() {
@@ -44,6 +44,7 @@ class _ExamPageState extends State<ExamPage> {
 
   @override
   Widget build(BuildContext context) {
+    // final sessionProvider = context.watch<SessionProvider>();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Start Exam'),
@@ -53,7 +54,7 @@ class _ExamPageState extends State<ExamPage> {
           : user == null
               ? const Center(child: Text('Not authenticated'))
               : StreamBuilder<List<Session>>(
-                  stream: _sessionRepository.watchSessions(ids ?? []),
+                  stream: FirestoreService().watchSessions(ids ?? []),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -122,7 +123,7 @@ class _ExamPageState extends State<ExamPage> {
                       if (session.wordEntries.isNotEmpty) {
                         allEntries.addAll(session.wordEntries);
                       } else {
-                        final entries = await _sessionRepository.getEntries(session.userId, session.id);
+                        final entries = await FirestoreService().getEntries(session.userId, session.id);
                         allEntries.addAll(entries.where((e) => e.type == EntryType.word));
                       }
                     }

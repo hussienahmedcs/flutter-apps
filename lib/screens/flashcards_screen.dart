@@ -1,7 +1,7 @@
 import 'package:flip_card/flip_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wordstory/data/models/center.dart';
 import 'package:wordstory/data/models/center_config.dart';
 import 'package:wordstory/data/models/gamification_model.dart';
@@ -9,6 +9,8 @@ import 'package:wordstory/data/models/session_model.dart';
 import 'package:wordstory/data/repositories/center_repository.dart';
 import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
+import 'package:wordstory/providers/gamification_provider.dart';
+import 'package:wordstory/services/firestore_service.dart';
 import '../data/models/entry_model.dart';
 // import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flip_card/flip_card_controller.dart';
@@ -21,8 +23,9 @@ class FlashcardsScreen extends StatefulWidget {
 }
 
 class FlashcardsScreenState extends State<FlashcardsScreen> {
-  List<Entry> _entries = [];
-  List<String> _selectedSessionIds = [];
+  final List<Entry> _entries = [];
+  // List<String> _selectedSessionIds = [];
+  List<Session> seletcedSessions = [];
   List<Session> _sessions = [];
 
   int _currentIndex = 0;
@@ -33,7 +36,6 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
   bool showPrevBtn = false;
   bool showNextBtn = false;
   Gamification? gamification;
-  final SessionRepository _sessionRepository = SessionRepository();
   // final stt.SpeechToText _stt = stt.SpeechToText();
   bool _sttAvailable = false;
   bool _isListening = false;
@@ -46,7 +48,7 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
     if (!mounted) return;
     setState(() {
       _currentIndex = 0;
-      _selectedSessionIds = [];
+      seletcedSessions = [];
     });
   }
 
@@ -170,7 +172,7 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
       sessionOwnersIds.add(user.uid); // user/ admin/ instructor/ or event learner with no center code
     }
 
-    final sessionsResult = await _sessionRepository.getSessions(sessionOwnersIds, user.uid);
+    final sessionsResult = await FirestoreService().getSessions(sessionOwnersIds, user.uid);
 
     if (!mounted) return;
     setState(() {
@@ -181,47 +183,53 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
   }
 
   Future<void> _loadEntries() async {
-    if (!mounted) return;
-    setState(() {
-      _loading = true;
-      _error = false;
-    });
+    // if (!mounted) return;
+    // setState(() {
+    //   _loading = true;
+    //   _error = false;
+    // });
 
-    try {
-      print(Provider.of<AppAuthProvider>(context, listen: false).isLoggedIn);
-      final user = Provider.of<AppAuthProvider>(context, listen: false).user;
-      if (user == null) {
-        setState(() {
-          _entries = [];
-          _loading = false;
-        });
-        return;
-      }
+    // try {
+    //   print(Provider.of<AppAuthProvider>(context, listen: false).isLoggedIn);
+    //   final user = Provider.of<AppAuthProvider>(context, listen: false).user;
+    //   if (user == null) {
+    //     setState(() {
+    //       _entries = [];
+    //       _loading = false;
+    //     });
+    //     return;
+    //   }
 
-      Query query = FirebaseFirestore.instance.collectionGroup('entries').where('user_id', isEqualTo: user.uid);
-      if (_selectedSessionIds.isNotEmpty) {
-        query = query.where('session_id', whereIn: _selectedSessionIds);
-      }
+    //   Query query = FirebaseFirestore.instance.collectionGroup('entries').where('user_id', isEqualTo: user.uid);
+    //   if (seletcedSessions.isNotEmpty) {
+    //     query = query.where('session_id', whereIn: _selectedSessionIds);
+    //   }
 
-      final querySnapshot = await query.get();
-      if (!mounted) return;
-      final entries =
-          querySnapshot.docs.map((doc) => Entry.fromMap(doc.id, doc.data() as Map<String, dynamic>)).toList();
-      entries.shuffle();
+    //   final querySnapshot = await query.get();
+    //   if (!mounted) return;
+    //   final entries =
+    //       querySnapshot.docs.map((doc) => Entry.fromMap(doc.id, doc.data() as Map<String, dynamic>)).toList();
+    //   entries.shuffle();
 
-      setState(() {
-        _entries = entries;
-        _loading = false;
-        _currentIndex = 0;
-      });
-    } catch (e) {
-      print(e.toString());
-      if (!mounted) return;
-      setState(() {
-        _error = true;
-        _loading = false;
-      });
+    //   setState(() {
+    //     _entries = entries;
+    //     _loading = false;
+    //     _currentIndex = 0;
+    //   });
+    // } catch (e) {
+    //   print(e.toString());
+    //   if (!mounted) return;
+    //   setState(() {
+    //     _error = true;
+    //     _loading = false;
+    //   });
+    // }
+    _entries.clear();
+    for (Session s in seletcedSessions) {
+      if (s.wordEntries.isNotEmpty) _entries.addAll(s.wordEntries);
     }
+    // print(_entries.length);
+    setState(() {});
   }
 
   void _finishSession() {
@@ -234,11 +242,9 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
       _currentIndex = _entries.length;
     });
 
-    // final gamification = Provider.of<GamificationProvider>(context, listen: false);
-    // if (gamification != null) {
-    //   gamification!.addXp(xp);
-    //   gamification!.registerDailyActivity();
-    // }
+    final gamification = Provider.of<GamificationProvider>(context, listen: false);
+    gamification.addXp(xp);
+    gamification.registerDailyActivity();
   }
 
   @override
@@ -254,9 +260,9 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
 
           if (_sessions.isEmpty) return _buildNoSessionsState(context);
 
-          if (_entries.isEmpty && _selectedSessionIds.isNotEmpty) return _buildSessionHasNoWordsState(context);
+          if (_entries.isEmpty && seletcedSessions.isNotEmpty) return _buildSessionHasNoWordsState(context);
 
-          if (_entries.isEmpty && _selectedSessionIds.isEmpty) return _buildPromptSelectSessions(context);
+          if (_entries.isEmpty && seletcedSessions.isEmpty) return _buildPromptSelectSessions(context);
 
           final isFinished = _currentIndex >= _entries.length;
           return isFinished ? _buildSummary(context) : _buildCard(context);
@@ -276,7 +282,7 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
     return StatefulBuilder(
       builder: (context, setInnerState) {
         final chipList = _sessions.map((session) {
-          final isSelected = _selectedSessionIds.contains(session.id);
+          final isSelected = seletcedSessions.any((s) => s.id == session.id);
           return Padding(
             padding: const EdgeInsets.only(right: 8, bottom: 8),
             child: FilterChip(
@@ -293,9 +299,9 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
               onSelected: (selected) {
                 setInnerState(() {
                   if (selected) {
-                    _selectedSessionIds.add(session.id);
+                    seletcedSessions.add(session);
                   } else {
-                    _selectedSessionIds.remove(session.id);
+                    seletcedSessions = seletcedSessions.where((s) => s.id != session.id).toList();
                   }
                 });
               },
@@ -312,7 +318,7 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (_selectedSessionIds.isNotEmpty) TextButton(onPressed: _loadEntries, child: const Text("Start")),
+                    if (seletcedSessions.isNotEmpty) TextButton(onPressed: _loadEntries, child: const Text("Start")),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,

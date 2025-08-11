@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wordstory/data/interfaces/user_interface.dart';
 import 'package:wordstory/data/models/center_config.dart';
-import 'package:wordstory/data/repositories/center_repository.dart';
-import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
+import 'package:wordstory/services/firestore_service.dart';
 import '../data/models/session_model.dart';
 // import '../providers/session_provider.dart';
 import 'add_edit_session_screen.dart';
@@ -28,8 +27,6 @@ class SessionsListScreen extends StatefulWidget {
 }
 
 class _SessionsListScreenState extends State<SessionsListScreen> {
-  final CenterRepository _centerRepository = CenterRepository();
-  final SessionRepository _sessionRepository = SessionRepository();
   List<String?> sessionOwnersIds = [];
   List<Session> sessions = [];
   bool _loading = true;
@@ -54,8 +51,9 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
       sessions = [];
     });
     final user = Provider.of<AppAuthProvider>(context, listen: false).user!;
-    sessionOwnersIds = await _sessionRepository.getSessionOwnersIds(user);
-    final sessionsList = await _sessionRepository.getSessions(sessionOwnersIds, user.uid);
+    final FirestoreService db = FirestoreService();
+    sessionOwnersIds = await db.getSessionOwnersIds(user);
+    final sessionsList = await db.getSessions(sessionOwnersIds, user.uid);
     setState(() {
       sessions.addAll(sessionsList);
     });
@@ -166,7 +164,7 @@ class _SessionsListScreenState extends State<SessionsListScreen> {
               setState(() {
                 _loading = true;
               });
-              await _sessionRepository.deleteSession(session.userId, session.id);
+              await FirestoreService().deleteSession(session.userId, session.id);
               loader();
             },
             child: const Text('Delete'),

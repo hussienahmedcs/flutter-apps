@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wordstory/data/interfaces/user_interface.dart';
-import 'package:wordstory/data/models/word_entry.dart';
-import 'package:wordstory/data/repositories/gamification_repository.dart';
-import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 // import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../data/models/entry_model.dart';
-import '../providers/session_provider.dart';
 import '../services/firestore_service.dart';
 import '../providers/gamification_provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -42,8 +38,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
   bool _isListening = false;
   bool _isScanning = false;
   List<Entry> _ocrEntries = [];
-  final SessionRepository _sessionRepository = SessionRepository();
-  final GamificationRepository _gamificationRepository = GamificationRepository();
+  // final GamificationRepository _gamificationRepository = GamificationRepository();
 
   @override
   void initState() {
@@ -153,18 +148,18 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
       difficulty: _difficulty,
       addedAt: widget.entry?.addedAt ?? DateTime.now(),
     );
-    await _sessionRepository.upsertEntry(user.uid, widget.sessionId, entry);
+    await FirestoreService().upsertEntry(user.uid, widget.sessionId, entry);
     // Award XP based on entry type
     // ignore: use_build_context_synchronously
-    final gamification = await _gamificationRepository.getGamification(user.uid);
+    final gamification = Provider.of<GamificationProvider>(context, listen: false);
     int xp = 0;
     if (entry.type == EntryType.word) {
       xp = 10;
     } else {
       xp = 20;
     }
-    // gamification.addXp(xp);
-    // gamification.registerDailyActivity();
+    gamification.addXp(xp);
+    gamification.registerDailyActivity();
 
     //Clear Form
     setState(() {
@@ -209,8 +204,8 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
       // final uid = Provider.of<SessionProvider>(context, listen: false).sessions.first.userId;
 
       final service = FirestoreService();
-      // final gamification = Provider.of<GamificationProvider>(context, listen: false);
-      // int totalXp = 0;
+      final gamification = Provider.of<GamificationProvider>(context, listen: false);
+      int totalXp = 0;
 
       for (final entry in _ocrEntries) {
         final newEntry = Entry(
@@ -225,12 +220,12 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
           difficulty: _difficulty,
           addedAt: DateTime.now(),
         );
-        await _sessionRepository.upsertEntry(user.uid, widget.sessionId, newEntry);
+        await FirestoreService().upsertEntry(user.uid, widget.sessionId, newEntry);
         // totalXp += newEntry.type == EntryType.word ? 10 : 20;
       }
 
-      // gamification.addXp(totalXp);
-      // gamification.registerDailyActivity();
+      gamification.addXp(totalXp);
+      gamification.registerDailyActivity();
 
       setState(() {
         _ocrEntries.clear();

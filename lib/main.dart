@@ -3,6 +3,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:wordstory/data/models/center.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
+import 'package:wordstory/providers/gamification_provider.dart';
+import 'package:wordstory/providers/session_provider.dart';
+import 'package:wordstory/providers/story_provider.dart';
 import 'package:wordstory/screens/home_page.dart';
 
 import 'providers/theme_provider.dart';
@@ -71,18 +74,18 @@ class _WordStoryAppState extends State<WordStoryApp> {
           providers: [
             ChangeNotifierProvider(create: (_) => AppAuthProvider()),
             ChangeNotifierProvider(create: (_) => ThemeProvider()),
-            // ChangeNotifierProxyProvider<AppAuthProvider, SessionProvider>(
-            //   create: (_) => SessionProvider(),
-            //   update: (_, auth, sessions) => sessions!..updateUser([auth.user?.uid]),
-            // ),
-            // ChangeNotifierProxyProvider<AppAuthProvider, GamificationProvider>(
-            //   create: (_) => GamificationProvider(),
-            //   update: (_, auth, gam) => gam!..updateUser(auth.user),
-            // ),
-            // ChangeNotifierProxyProvider<AppAuthProvider, StoryProvider>(
-            //   create: (_) => StoryProvider(),
-            //   update: (_, auth, story) => story!..updateUser(auth.user),
-            // ),
+            ChangeNotifierProxyProvider<AppAuthProvider, SessionProvider>(
+              create: (_) => SessionProvider(),
+              update: (_, auth, sessions) => sessions!..updateUser(auth.user),
+            ),
+            ChangeNotifierProxyProvider<AppAuthProvider, GamificationProvider>(
+              create: (_) => GamificationProvider(),
+              update: (_, auth, gam) => gam!..updateUser(auth.user),
+            ),
+            ChangeNotifierProxyProvider<AppAuthProvider, StoryProvider>(
+              create: (_) => StoryProvider(),
+              update: (_, auth, story) => story!..updateUser(auth.user),
+            ),
           ],
           child: Consumer<ThemeProvider>(
             builder: (context, theme, _) {
@@ -99,10 +102,6 @@ class _WordStoryAppState extends State<WordStoryApp> {
                         body: Center(child: CircularProgressIndicator()),
                       );
                     }
-                    print("->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>auth.isLoggedIn:${auth.isLoggedIn}");
-                    // print(AuthProvider.userCenterWithRoles?.center.code ?? "No Center");
-
-                    print('Going to ${auth.isLoggedIn ? 'HomePage' : 'LoginScreen'}');
                     return
                         // MyLogoTestWidget();
                         auth.isLoggedIn

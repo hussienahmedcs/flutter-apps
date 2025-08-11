@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wordstory/data/interfaces/user_interface.dart';
 import 'package:wordstory/data/models/gamification_model.dart';
+import 'package:wordstory/providers/gamification_provider.dart';
 
 import '../providers/app_auth_provider.dart';
 import '../providers/theme_provider.dart';
@@ -26,7 +27,6 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _nameController = TextEditingController();
   bool _editingName = false;
-  Gamification? gamification;
 
   @override
   void dispose() {
@@ -107,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AppAuthProvider>();
     final themeProvider = context.watch<ThemeProvider>();
-    // final gamification = context.watch<GamificationProvider>().stats;
+    final gamification = context.watch<GamificationProvider>().stats;
     final user = authProvider.user;
     if (user == null) {
       return const Scaffold(body: Center(child: Text('Not authenticated')));

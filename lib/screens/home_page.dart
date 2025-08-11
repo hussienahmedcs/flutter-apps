@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wordstory/data/models/center_config.dart';
-import 'package:wordstory/data/models/gamification_model.dart';
 import 'package:wordstory/data/models/session_model.dart';
 import 'package:wordstory/data/models/story_model.dart';
 import 'package:wordstory/data/repositories/center_repository.dart';
-import 'package:wordstory/data/repositories/gamification_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
+import 'package:wordstory/providers/gamification_provider.dart';
 import 'package:wordstory/screens/admin/manage_center_page.dart';
 import 'package:wordstory/screens/center_details_page.dart';
 import 'package:wordstory/screens/exam/exam_page.dart';
@@ -32,8 +31,8 @@ class _HomePageState extends State<HomePage> {
   // final StoryRepository _storyRepository = StoryRepository();
   final List<Story> stories = [];
   final List<Session> sessions = []; //context.watch<SessionProvider>().sessions;
-  Gamification? gamification;
-  final GamificationRepository _gamificationRepository = GamificationRepository();
+  // Gamification? gamification;
+  // final GamificationRepository _gamificationRepository = GamificationRepository();
   final CenterRepository _centerRepository = CenterRepository();
   CenterConfig? config;
 
@@ -45,19 +44,21 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> loader() async {
     final user = context.read<AppAuthProvider>().user!;
-    final data = await _gamificationRepository.getGamification(user.uid);
+    // final data = context.read<GamificationProvider>().stats;
 
     // if (user.isUser) sessionOwnersIds.add(user.uid);
-    if (user.centerCode != null) config = await _centerRepository.getCenterConfig(user.centerCode!);
-
-    setState(() {
-      gamification = data;
-    });
+    if (user.centerCode != null) {
+      config = await _centerRepository.getCenterConfig(user.centerCode!);
+    }
+    // setState(() {
+    //   gamification = data;
+    // });
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    // print('>>>>>>>>>>>>>>>>>>>>>');
+    final gamification = context.watch<GamificationProvider>().stats;
     final user = context.watch<AppAuthProvider>().user!;
     return Scaffold(
       body: SingleChildScrollView(
@@ -129,7 +130,7 @@ class _HomePageState extends State<HomePage> {
                   'icon': Icons.library_books,
                   'label': 'Stories',
                   'onTap': () {
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => MyStoriesScreen(user: user)));
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => MyStoriesScreen()));
                   },
                   'enabled':
                       user.isUser || user.isAdmin || user.isLearner || user.isPendingLearner || user.isInstructor,
