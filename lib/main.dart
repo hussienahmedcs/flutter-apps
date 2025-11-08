@@ -12,6 +12,7 @@ import 'providers/theme_provider.dart';
 import 'screens/login_screen.dart';
 import 'theme.dart';
 import 'package:app_links/app_links.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Entry point for the WordStory app.  The application leverages
 /// [`Firebase.initializeApp`](https://firebase.flutter.dev/docs/overview#initializing-firebase) to
@@ -23,6 +24,8 @@ import 'package:app_links/app_links.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   runApp(const WordStoryApp());
 }
 

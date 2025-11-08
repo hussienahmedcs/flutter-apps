@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wordstory/data/config/session-conf.dart';
 import 'package:wordstory/services/firestore_service.dart';
 import '../data/models/entry_model.dart';
 import 'add_edit_entry_screen.dart';
@@ -59,10 +60,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
         bottom: !_isSelectionMode
             ? TabBar(
                 controller: _tabController,
-                tabs: const [
-                  Tab(text: 'Words'),
-                  Tab(text: 'Idioms'),
-                  Tab(text: 'Phrasal Verbs'),
+                tabs: [
+                  if (SessionConfig.SessionSections['word'] == true) Tab(text: 'Words'),
+                  if (SessionConfig.SessionSections['idiom'] == true) Tab(text: 'Idioms'),
+                  if (SessionConfig.SessionSections['phrasal'] == true) Tab(text: 'Phrasal Verbs'),
+                  if (SessionConfig.SessionSections['quiz'] == true) Tab(text: 'Quiz'),
                 ],
               )
             : null,
@@ -106,9 +108,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
           return TabBarView(
             controller: _tabController,
             children: [
-              _buildEntriesList(context, widget.session.userId, widget.session.id, words),
-              _buildEntriesList(context, widget.session.userId, widget.session.id, idioms),
-              _buildEntriesList(context, widget.session.userId, widget.session.id, phrasals),
+              if (SessionConfig.SessionSections['word'] == true)
+                _buildEntriesList(context, widget.session.userId, widget.session.id, words),
+              if (SessionConfig.SessionSections['idiom'] == true)
+                _buildEntriesList(context, widget.session.userId, widget.session.id, idioms),
+              if (SessionConfig.SessionSections['phrasal'] == true)
+                _buildEntriesList(context, widget.session.userId, widget.session.id, phrasals),
+              if (SessionConfig.SessionSections['quiz'] == true)
+                _buildQuiz(context, widget.session.userId, widget.session.id),
             ],
           );
         },
@@ -236,6 +243,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
           ),
         );
       },
+    );
+  }
+
+  Widget _buildQuiz(BuildContext context, String uid, String sessionId) {
+    // final service = FirestoreService();
+    return Center(
+      child: Text('No equiz'),
     );
   }
 }

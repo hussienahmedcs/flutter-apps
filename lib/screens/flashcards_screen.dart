@@ -7,7 +7,7 @@ import 'package:wordstory/data/models/center_config.dart';
 import 'package:wordstory/data/models/gamification_model.dart';
 import 'package:wordstory/data/models/session_model.dart';
 import 'package:wordstory/data/repositories/center_repository.dart';
-import 'package:wordstory/data/repositories/session_repository.dart';
+// import 'package:wordstory/data/repositories/session_repository.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 import 'package:wordstory/providers/gamification_provider.dart';
 import 'package:wordstory/services/firestore_service.dart';
@@ -168,9 +168,10 @@ class FlashcardsScreenState extends State<FlashcardsScreen> {
         final centerInfo = await _centerRepository.getCenter(user.centerCode!);
         if (centerInfo != null) sessionOwnersIds.add(centerInfo.admin);
       }
-    } else {
+    } 
+    // else {
       sessionOwnersIds.add(user.uid); // user/ admin/ instructor/ or event learner with no center code
-    }
+    // }
 
     final sessionsResult = await FirestoreService().getSessions(sessionOwnersIds, user.uid);
 

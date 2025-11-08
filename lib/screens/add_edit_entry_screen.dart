@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wordstory/data/config/session-conf.dart';
 import 'package:wordstory/data/interfaces/user_interface.dart';
 import 'package:wordstory/providers/app_auth_provider.dart';
 // import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -262,6 +263,7 @@ class _AddEditEntryScreenState extends State<AddEditEntryScreen> {
                   border: OutlineInputBorder(),
                 ),
                 items: EntryType.values
+                    .where((e) => SessionConfig.SessionSections[e.name] == true)
                     .map((e) => DropdownMenuItem(
                           value: e,
                           child: Text(e.toString().split('.').last),

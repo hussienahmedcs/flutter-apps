@@ -3,9 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:wordstory/data/models/entry_model.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GeminiOcrService {
-  static const String apiKey = "AIzaSyCi0nEKnCBqTUd_i39pJBy2qm_EaaLdO7A";
+  static final String apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
   final BuildContext context;
   static const String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
